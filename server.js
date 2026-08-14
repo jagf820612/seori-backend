@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -19,6 +20,8 @@ io.on('connection', (socket) => {
 
 app.use(cors());
 app.use(express.json());
+// Esto le dice al servidor que muestre los archivos de la carpeta frontend
+app.use(express.static(path.join(__dirname, 'frontend')));
 
 // --- NUEVO: Permitir que el servidor muestre las pantallas ---
 app.use(express.static('frontend'));
@@ -541,6 +544,16 @@ app.post('/api/gastos', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// 1. Esto le dice al servidor que muestre los archivos de la carpeta frontend
+app.use(express.static(path.join(__dirname, 'frontend')));
+
+// 2. Ruta principal para enviar directo al login
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'frontend', 'login.html'));
+});
+
+// 3. Aquí va tu código original de .listen que enciende el servidor
 
 
 // Arrancamos el servidor completo (Express + Sockets)
