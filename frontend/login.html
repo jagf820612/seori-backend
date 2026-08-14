@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seori - Iniciar Sesión</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            background-color: #f8f9fa; 
+            font-family: 'Segoe UI', sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+        }
+        .login-card { 
+            background: white; 
+            padding: 40px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03); 
+            width: 360px; 
+            text-align: center; 
+            border: 1px solid #e0e0e0;
+            border-top: 5px solid #111111; 
+        }
+        .logo-container {
+            margin-bottom: 20px;
+        }
+        .logo-container img {
+            width: 120px; 
+            height: auto;
+            object-fit: contain;
+        }
+        .login-card h2 { 
+            margin-top: 5px; 
+            color: #111111; 
+            margin-bottom: 25px; 
+            font-size: 20px; 
+            font-weight: 600;
+        }
+        .grupo-input { 
+            text-align: left; 
+            margin-bottom: 18px; 
+        }
+        label { 
+            display: block; 
+            font-weight: 600; 
+            margin-bottom: 6px; 
+            font-size: 13px; 
+            color: #555555; 
+        }
+        input { 
+            width: 100%; 
+            padding: 12px; 
+            border: 1px solid #dcdde1; 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+            font-size: 15px; 
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus {
+            border-color: #111111;
+        }
+        .btn-ingresar { 
+            width: 100%; 
+            padding: 12px; 
+            background: #111111; 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            font-size: 15px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            margin-top: 15px; 
+            transition: background 0.2s; 
+        }
+        .btn-ingresar:hover { 
+            background: #333333; 
+        }
+        .error-msg { 
+            color: #e74c3c; 
+            font-size: 13px; 
+            margin-top: 15px; 
+            display: none; 
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <div class="logo-container">
+            <img src="img/logo-seori.png" alt="Seori Logo">
+        </div>
+
+        <h2>Iniciar Sesión</h2>
+        
+        <div class="grupo-input">
+            <label>Usuario</label>
+            <input type="text" id="usuario" placeholder="Ingresa tu usuario">
+        </div>
+        
+        <div class="grupo-input">
+            <label>Contraseña</label>
+            <input type="password" id="password" placeholder="••••••••">
+        </div>
+        
+        <button class="btn-ingresar" onclick="realizarLogin()">Ingresar</button>
+        
+        <div class="error-msg" id="mensaje-error">Usuario o contraseña incorrectos</div>
+    </div>
+
+    <script>
+        async function realizarLogin() {
+            const usuario = document.getElementById('usuario').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorDiv = document.getElementById('mensaje-error');
+
+            if (!usuario || !password) {
+                errorDiv.innerText = "Por favor completa todos los campos";
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const res = await fetch('https://seori-backend.onrender.com/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario, password })
+                });
+
+                if (!res.ok) throw new Error("Credenciales inválidas");
+
+                const data = await res.json();
+                
+                // Guardamos los datos de la sesión limpiamente
+                localStorage.setItem('rol_activo', data.rol);
+                localStorage.setItem('usuario_activo', data.usuario);
+                localStorage.setItem('usuario_id', data.id);
+
+                // Redirigimos según el rol recibido de la BD de forma exacta
+                if (data.rol === 'produccion' || data.rol === 'cocina') {
+                    window.location.href = 'preparacion.html';
+                } else if (data.rol === 'caja') {
+                    window.location.href = 'index.html';
+                } else if (data.rol === 'admin') {
+                    window.location.href = 'admin.html';
+                } else {
+                    window.location.href = 'index.html';
+                }
+
+            } catch (error) {
+                errorDiv.innerText = "Usuario o contraseña incorrectos";
+                errorDiv.style.display = 'block';
+            }
+        }
+    </script>
+
+</body>
+</html>

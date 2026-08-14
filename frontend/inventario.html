@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seori - Gestión de Inventario</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; padding: 30px; color: #111111; margin: 0; }
+        
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #111111;
+            padding-bottom: 15px;
+            max-width: 1200px;
+            margin: 0 auto 25px auto;
+        }
+        .header-container h1 { margin: 0; color: #111111; font-size: 24px; }
+        .logo-pequeno { height: 35px; width: auto; object-fit: contain; }
+
+        .contenedor { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; align-items: flex-start; }
+        
+        .panel-form { background: white; padding: 20px; border-radius: 8px; width: 40%; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #e0e0e0; border-top: 4px solid #111111; }
+        .grupo-input { margin-bottom: 15px; }
+        label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 13px; color: #555555; }
+        input[type="text"], input[type="number"] { width: 100%; padding: 10px; border: 1px solid #dcdde1; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        
+        .caja-variantes { background: #f1f2f6; padding: 15px; border-radius: 6px; margin-bottom: 15px; }
+        .fila-variante { display: flex; gap: 10px; margin-bottom: 10px; align-items: end; }
+        .btn-add-variante { background: #111111; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; }
+        
+        .btn-guardar { width: 100%; padding: 12px; background: #111111; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 10px; transition: background 0.2s; }
+        .btn-guardar:hover { background: #333333; }
+        
+        .panel-tabla { background: white; padding: 20px; border-radius: 8px; width: 60%; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #e0e0e0; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+        th, td { padding: 12px; border-bottom: 1px solid #eeeeee; }
+        th { background-color: #f1f2f6; color: #333333; font-weight: 600; font-size: 12px; text-transform: uppercase; }
+        .btn-eliminar { background: #e74c3c; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; }
+        
+        .volver { display: block; width: 200px; margin: 30px auto; text-align: center; background: #111111; color: white; padding: 12px; text-decoration: none; border-radius: 6px; font-weight: 600; transition: background 0.2s; }
+        .volver:hover { background: #333333; }
+
+        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 22px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #111111; }
+        input:checked + .slider:before { transform: translateX(22px); }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <h1>📦 Gestión de Inventario</h1>
+        <img src="img/logo-seori.png" alt="Seori Logo" class="logo-pequeno">
+    </div>
+    
+    <div class="contenedor">
+        <div class="panel-form">
+            <h3 style="margin-top: 0; font-size: 16px; color: #111111;">Crear Producto</h3>
+            
+            <div class="grupo-input">
+                <label>Nombre del Producto</label>
+                <input type="text" id="nombre_producto" placeholder="Ej: Bingsu Tradicional">
+            </div>
+            
+            <div class="grupo-input" style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <label>ID Categoría</label>
+                    <input type="number" id="categoria_id" placeholder="Ej: 1">
+                </div>
+                <div style="flex: 1;">
+                    <label>Imagen</label>
+                    <input type="text" id="imagen" placeholder="Ej: bingsu.jpg">
+                </div>
+            </div>
+
+            <div class="grupo-input" style="display: flex; gap: 20px; align-items: center;">
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;"><input type="checkbox" id="disponible" checked> Visible</label>
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;"><input type="checkbox" id="controla_inventario"> Stock</label>
+            </div>
+
+            <div class="caja-variantes">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <label style="margin: 0;">Variantes (Precios y Tamaños)</label>
+                    <button class="btn-add-variante" onclick="agregarFilaVariante()">+ Añadir</button>
+                </div>
+                <div id="lista-variantes">
+                </div>
+            </div>
+            
+            <button class="btn-guardar" onclick="guardarProducto()">Guardar Todo</button>
+        </div>
+
+        <div class="panel-tabla">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Variantes y Precios</th>
+                        <th>Stock</th>
+                        <th style="text-align: center;">Visible</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-productos">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <a href="admin.html" class="volver">⬅ Volver al Panel</a>
+
+    <script>
+        if (localStorage.getItem('rol_activo') !== 'admin') window.location.href = 'login.html';
+
+        function agregarFilaVariante() {
+            const html = `
+                <div class="fila-variante">
+                    <input type="text" placeholder="Nombre (Ej: Personal)" class="var-nombre" style="width: 38%">
+                    <input type="number" placeholder="Precio $" class="var-precio" style="width: 32%">
+                    <input type="number" placeholder="Stock" class="var-stock" style="width: 20%">
+                    <button onclick="this.parentElement.remove()" style="background: #e74c3c; color: white; border: none; cursor:pointer; border-radius: 4px; padding: 8px;">X</button>
+                </div>
+            `;
+            document.getElementById('lista-variantes').insertAdjacentHTML('beforeend', html);
+        }
+        agregarFilaVariante();
+
+        async function cargarProductos() {
+            const res = await fetch('https://seori-backend.onrender.com/api/productos');
+            const productos = await res.json();
+            
+            const tbody = document.getElementById('tabla-productos');
+            tbody.innerHTML = '';
+
+            productos.forEach(p => {
+                let variantesHtml = '';
+                let stockHtml = '';
+                
+                if (p.producto_variantes && p.producto_variantes.length > 0) {
+                    variantesHtml = p.producto_variantes.map(v => 
+                        `• ${v.nombre_variante}: $${v.precio}`
+                    ).join('<br>');
+
+                    stockHtml = p.producto_variantes.map(v => 
+                        `${v.stock_actual} und.`
+                    ).join('<br>');
+                } else {
+                    variantesHtml = 'Sin variantes';
+                    stockHtml = 'No aplica';
+                }
+
+                const checkeado = p.disponible ? "checked" : "";
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>
+                            <strong>${p.nombre_producto}</strong><br>
+                            <small style="color:gray">Cat: ${p.categoria_id || 'N/A'}</small>
+                        </td>
+                        <td>${variantesHtml}</td>
+                        <td>${p.controla_inventario ? stockHtml : 'No aplica'}</td>
+                        <td style="text-align: center;">
+                            <label class="switch">
+                                <input type="checkbox" ${checkeado} onchange="cambiarEstado(${p.id}, this.checked)">
+                                <span class="slider"></span>
+                            </label>
+                        </td>
+                        <td>
+                            <button class="btn-eliminar" onclick="eliminarProducto(${p.id})">❌</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        window.cambiarEstado = async function(idProducto, nuevoEstado) {
+            try {
+                const respuesta = await fetch(`https://seori-backend.onrender.com/api/productos/${idProducto}/estado`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ disponible: nuevoEstado })
+                });
+
+                if (!respuesta.ok) throw new Error("No se pudo actualizar");
+                cargarProductos(); 
+            } catch (error) {
+                alert("Hubo un error al actualizar el estado del producto.");
+                cargarProductos();
+            }
+        }
+
+        async function guardarProducto() {
+            const nombre_producto = document.getElementById('nombre_producto').value;
+            const cat_val = document.getElementById('categoria_id').value;
+            const categoria_id = cat_val === "" ? null : parseInt(cat_val);
+            const imagen = document.getElementById('imagen').value;
+            const disponible = document.getElementById('disponible').checked;
+            const controla_inventario = document.getElementById('controla_inventario').checked;
+
+            let variantes = [];
+            document.querySelectorAll('.fila-variante').forEach(fila => {
+                const nom = fila.querySelector('.var-nombre').value;
+                const prec = fila.querySelector('.var-precio').value;
+                const stk = fila.querySelector('.var-stock').value;
+                
+                if(nom && prec) { 
+                    variantes.push({ nombre_variante: nom, precio: prec, stock_actual: stk || 0 });
+                }
+            });
+
+            if (!nombre_producto || variantes.length === 0) {
+                alert("Debes escribir el nombre del producto y al menos una variante con precio.");
+                return;
+            }
+
+            const payload = { nombre_producto, categoria_id, imagen, disponible, controla_inventario, variantes };
+
+            try {
+                await fetch('https://seori-backend.onrender.com/api/productos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                document.getElementById('nombre_producto').value = '';
+                document.getElementById('categoria_id').value = '';
+                document.getElementById('imagen').value = '';
+                document.getElementById('lista-variantes').innerHTML = '';
+                agregarFilaVariante();
+                cargarProductos();
+            } catch (error) {
+                alert("Error al guardar");
+            }
+        }
+
+        async function eliminarProducto(id) {
+            if(confirm("¿Eliminar este producto y todas sus variantes?")) {
+                await fetch(`https://seori-backend.onrender.com/api/productos/${id}`, { method: 'DELETE' });
+                cargarProductos();
+            }
+        }
+
+        cargarProductos();
+    </script>
+</body>
+</html>

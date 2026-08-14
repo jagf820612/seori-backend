@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seori - Módulo de Gastos</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; padding: 30px; color: #111111; margin: 0; }
+        
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #111111;
+            padding-bottom: 15px;
+            max-width: 1000px;
+            margin: 0 auto 25px auto;
+        }
+        .header-container h1 { margin: 0; color: #111111; font-size: 24px; }
+        .logo-pequeno { height: 35px; width: auto; object-fit: contain; }
+
+        .contenedor { display: flex; gap: 20px; max-width: 1000px; margin: 0 auto; align-items: flex-start; }
+        
+        .panel-form { background: white; padding: 20px; border-radius: 8px; width: 35%; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #e0e0e0; border-top: 4px solid #111111; }
+        .panel-form input, .panel-form select { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #dcdde1; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        .panel-form label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 13px; color: #555555; }
+        
+        .btn-guardar { width: 100%; padding: 12px; background: #111111; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 10px; transition: background 0.2s; }
+        .btn-guardar:hover { background: #333333; }
+        
+        .panel-tabla { background: white; padding: 20px; border-radius: 8px; width: 65%; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #e0e0e0; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+        th, td { padding: 12px; border-bottom: 1px solid #eeeeee; }
+        th { background-color: #f1f2f6; color: #333333; font-weight: 600; font-size: 12px; text-transform: uppercase; }
+        
+        .volver { display: block; width: 200px; margin: 30px auto; text-align: center; background: #111111; color: white; padding: 12px; text-decoration: none; border-radius: 6px; font-weight: 600; transition: background 0.2s; }
+        .volver:hover { background: #333333; }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <h1>💸 Registro de Gastos</h1>
+        <img src="img/logo-seori.png" alt="Seori Logo" class="logo-pequeno">
+    </div>
+    
+    <div class="contenedor">
+        <div class="panel-form">
+            <h3 style="margin-top: 0; font-size: 16px; color: #111111;">Nuevo Gasto</h3>
+            
+            <label>Fecha y Hora</label>
+            <input type="datetime-local" id="fecha_hora">
+
+            <label>Categoría</label>
+            <select id="categoria_gasto">
+                <option value="Insumos">Insumos (Hielo, frutas, etc)</option>
+                <option value="Servicios">Servicios Públicos</option>
+                <option value="Transporte">Transporte / Domicilios</option>
+                <option value="Mantenimiento">Mantenimiento</option>
+                <option value="Otros">Otros</option>
+            </select>
+            
+            <label>Descripción</label>
+            <input type="text" id="descripcion" placeholder="Ej: Compra de 5 bolsas de hielo">
+            
+            <label>Monto ($)</label>
+            <input type="number" id="monto" placeholder="Ej: 15000">
+
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <label>ID Turno</label>
+                    <input type="number" id="turno_id" placeholder="Ej: 1">
+                </div>
+                <div style="flex: 1;">
+                    <label>ID Usuario</label>
+                    <input type="number" id="usuario_id" placeholder="Ej: 1">
+                </div>
+            </div>
+            
+            <button class="btn-guardar" onclick="guardarGasto()">Registrar Gasto</button>
+        </div>
+
+        <div class="panel-tabla">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Categoría</th>
+                        <th>Descripción</th>
+                        <th>Monto</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-gastos">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <a href="admin.html" class="volver">⬅ Volver al Panel</a>
+
+    <script>
+        if (localStorage.getItem('rol_activo') !== 'admin') {
+            window.location.href = 'login.html';
+        }
+
+        function setFechaPorDefecto() {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('fecha_hora').value = now.toISOString().slice(0,16);
+        }
+
+        async function cargarGastos() {
+            try {
+                const respuesta = await fetch('https://seori-backend.onrender.com/api/gastos');
+                const gastos = await respuesta.json();
+                
+                const tbody = document.getElementById('tabla-gastos');
+                tbody.innerHTML = ''; 
+
+                gastos.forEach(g => {
+                    const fecha = new Date(g.fecha_hora).toLocaleString('es-CO', { 
+                        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' 
+                    });
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${fecha}</td>
+                            <td><strong>${g.categoria_gasto}</strong></td>
+                            <td>${g.descripcion || ''}</td>
+                            <td style="color: #111111; font-weight: bold;">-$${g.monto}</td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error("Error cargando gastos:", error);
+            }
+        }
+
+        async function guardarGasto() {
+            const fecha_hora = document.getElementById('fecha_hora').value;
+            const categoria_gasto = document.getElementById('categoria_gasto').value;
+            const descripcion = document.getElementById('descripcion').value;
+            
+            const monto_val = document.getElementById('monto').value;
+            const monto = monto_val === "" ? 0 : parseFloat(monto_val);
+
+            const turno_val = document.getElementById('turno_id').value;
+            const turno_id = turno_val === "" ? null : parseInt(turno_val);
+
+            const usuario_val = document.getElementById('usuario_id').value;
+            const usuario_id = usuario_val === "" ? null : parseInt(usuario_val);
+
+            if (monto <= 0) {
+                alert("Por favor, ingresa un monto válido mayor a cero.");
+                return;
+            }
+
+            const payload = { turno_id, fecha_hora, categoria_gasto, descripcion, monto, usuario_id };
+
+            try {
+                await fetch('https://seori-backend.onrender.com/api/gastos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                document.getElementById('descripcion').value = '';
+                document.getElementById('monto').value = '';
+                
+                cargarGastos();
+            } catch (error) {
+                alert("Error al registrar el gasto");
+            }
+        }
+
+        setFechaPorDefecto();
+        cargarGastos();
+    </script>
+</body>
+</html>

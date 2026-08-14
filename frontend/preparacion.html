@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seori - Área de Preparación</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            background-color: #f8f9fa; 
+            color: #111111; 
+            font-family: 'Segoe UI', sans-serif; 
+            margin: 0; 
+            padding: 30px; 
+        }
+        
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #111111;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        .header-container h1 { 
+            margin: 0; 
+            font-size: 24px; 
+            font-weight: 600;
+            color: #111111;
+        }
+
+        .logo-pequeno {
+            height: 35px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .btn-salir { 
+            background: #111111; 
+            color: white; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            font-size: 13px;
+        }
+        .btn-salir:hover { background: #333333; }
+        
+        #zona-pedidos {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .tarjeta-pedido {
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-top: 4px solid #111111;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+
+        .tarjeta-pedido h2 { 
+            margin-top: 0; 
+            margin-bottom: 15px;
+            color: #111111; 
+            font-size: 20px; 
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+
+        .item-pedido { 
+            font-size: 15px; 
+            margin-bottom: 12px; 
+            border-bottom: 1px dashed #eaeaea; 
+            padding-bottom: 8px; 
+            color: #333333;
+        }
+        
+        .variante-pedido { 
+            display: block; 
+            font-size: 13px; 
+            color: #666666; 
+            margin-top: 2px; 
+        }
+        
+        .notas-pedido { 
+            display: block; 
+            font-size: 13px; 
+            color: #000000; 
+            background: #f1f2f6;
+            padding: 5px 8px;
+            border-radius: 4px;
+            margin-top: 5px; 
+            font-weight: 500;
+        }
+
+        .btn-listo { 
+            width: 100%; 
+            padding: 12px; 
+            background-color: #111111; 
+            color: #ffffff; 
+            border: none; 
+            font-size: 14px; 
+            font-weight: 600; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            margin-top: 15px; 
+            transition: background 0.2s;
+        }
+        .btn-listo:hover { 
+            background-color: #333333; 
+        }
+
+        .vacio {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: #888888;
+            font-size: 16px;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <h1>👨‍🍳 Producción / Cocina</h1>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <button class="btn-salir" onclick="cerrarSesion()">Cerrar Sesión</button>
+            <img src="img/logo-seori.png" alt="Seori Logo" class="logo-pequeno">
+        </div>
+    </div>
+    
+    <div id="zona-pedidos">
+        <div class="vacio" id="mensaje-vacio">No hay pedidos pendientes en este momento.</div>
+    </div>
+
+    <!-- Librería de Socket.io -->
+    <!-- Librería de Socket.io -->
+    <script src="https://seori-backend.onrender.com/socket.io/socket.io.js"></script>
+    
+    <script>
+        // --- CANDADO DE SEGURIDAD BLINDADO ---
+        const rolUsuario = localStorage.getItem('rol_activo');
+
+        if (!rolUsuario) {
+            window.location.href = 'login.html';
+        } else if (rolUsuario === 'caja') {
+            alert("Acceso denegado. Esta pantalla es exclusiva para el área de producción.");
+            window.location.href = 'index.html';
+        }
+
+        window.cerrarSesion = () => { 
+            localStorage.clear(); 
+            window.location.href = 'login.html'; 
+        };
+        
+        const socket = io('https://seori-backend.onrender.com');
+        const contenedor = document.getElementById('zona-pedidos');
+
+        function verificarVacio() {
+            if (contenedor.querySelectorAll('.tarjeta-pedido').length === 0) {
+                if (!document.getElementById('mensaje-vacio')) {
+                    const div = document.createElement('div');
+                    div.id = 'mensaje-vacio';
+                    div.className = 'vacio';
+                    div.innerText = 'No hay pedidos pendientes en este momento.';
+                    contenedor.appendChild(div);
+                }
+            } else {
+                const vacio = document.getElementById('mensaje-vacio');
+                if (vacio) vacio.remove();
+            }
+        }
+
+        // --- NUEVA FUNCIÓN PARA MARCAR COMO LISTO EN LA BD ---
+        async function marcarComoListo(pedidoId, botonElemento) {
+            try {
+                botonElemento.innerText = "Actualizando...";
+                botonElemento.disabled = true;
+
+                // Hacemos la petición al servidor backend para cambiar el estado en Supabase
+                const res = await fetch(`https://seori-backend.onrender.com/api/pedidos/${pedidoId}/completar`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (!res.ok) throw new Error("No se pudo actualizar el estado en el servidor");
+
+                // Si todo sale bien en la BD, eliminamos la tarjeta visualmente y revisamos si quedó vacío
+                const tarjeta = botonElemento.closest('.tarjeta-pedido');
+                tarjeta.remove();
+                verificarVacio();
+
+            } catch (error) {
+                console.error("Error al completar pedido:", error);
+                alert("Hubo un error al actualizar el pedido en la base de datos.");
+                botonElemento.innerText = "✔️ Marcar como Listo";
+                botonElemento.disabled = false;
+            }
+        }
+
+        // Escuchar nuevos pedidos en tiempo real
+        socket.on('nuevo-pedido', (datos) => {
+            const vacio = document.getElementById('mensaje-vacio');
+            if (vacio) vacio.remove();
+
+            const tarjeta = document.createElement('div');
+            tarjeta.className = 'tarjeta-pedido';
+            
+            let contenido = `<h2>Pedido #${datos.pedido_id}</h2>`;
+            
+            datos.detalles.forEach(item => {
+                contenido += `
+                <div class="item-pedido">
+                    <strong>${item.cantidad}x</strong> ${item.nombre}
+                    <span class="variante-pedido">${item.variante || ''}</span>
+                    ${item.notas ? `<span class="notas-pedido">📝 ${item.notas}</span>` : ''}
+                </div>`;
+            });
+            
+            // CONECTAMOS EL BOTÓN A LA NUEVA FUNCIÓN PASANDO EL ID DEL PEDIDO
+            contenido += `<button class="btn-listo" onclick="marcarComoListo(${datos.pedido_id}, this)">✔️ Marcar como Listo</button>`;
+            
+            tarjeta.innerHTML = contenido;
+            contenedor.prepend(tarjeta);
+        });
+    </script>
+</body>
+</html>

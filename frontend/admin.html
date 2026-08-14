@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seori - Panel de Administración</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            background-color: #f8f9fa; 
+            font-family: 'Segoe UI', sans-serif; 
+            padding: 30px; 
+            color: #111111; 
+            margin: 0;
+        }
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #111111;
+            padding-bottom: 15px;
+            max-width: 900px;
+            margin: 0 auto 30px auto;
+        }
+        .header-container h1 { 
+            margin: 0; 
+            font-size: 24px; 
+            color: #111111; 
+        }
+        .logo-pequeno {
+            height: 35px;
+            width: auto;
+            object-fit: contain;
+        }
+        .subtitulo {
+            text-align: center;
+            color: #555555;
+            margin-bottom: 40px;
+        }
+        .menu-grid { 
+            display: flex; 
+            justify-content: center; 
+            gap: 20px; 
+            flex-wrap: wrap; 
+            max-width: 900px;
+            margin: 0 auto; 
+        }
+        .card { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 8px; 
+            width: 260px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03); 
+            text-decoration: none; 
+            color: #111111; 
+            transition: transform 0.2s, box-shadow 0.2s; 
+            border: 1px solid #e0e0e0;
+            border-top: 4px solid #111111; 
+            text-align: left;
+        }
+        .card:hover { 
+            transform: translateY(-3px); 
+            box-shadow: 0 6px 15px rgba(0,0,0,0.06); 
+        }
+        .card h2 { margin: 0 0 10px 0; font-size: 18px; color: #111111; }
+        .card p { margin: 0; color: #666666; font-size: 13px; }
+        
+        .btn-salir { 
+            display: block; 
+            width: 200px; 
+            margin: 50px auto 0; 
+            padding: 12px; 
+            background: #111111; 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .btn-salir:hover { background: #333333; }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <h1>⚙️ Panel de Administración</h1>
+        <img src="img/logo-seori.png" alt="Seori Logo" class="logo-pequeno">
+    </div>
+    
+    <p class="subtitulo">Bienvenido, <span id="nombre-admin" style="font-weight: 600;"></span></p>
+
+    <div class="menu-grid">
+        <a href="cierre.html" class="card">
+            <h2>📊 Cuadre de Caja</h2>
+            <p>Ventas del día, métodos de pago y auditoría de turnos.</p>
+        </a>
+        
+        <a href="inventario.html" class="card">
+            <h2>📦 Inventario</h2>
+            <p>Control de productos, variantes, precios y disponibilidad.</p>
+        </a>
+
+        <a href="gastos.html" class="card">
+            <h2>💸 Gastos</h2>
+            <p>Registro de salidas de dinero e insumos operativos.</p>
+        </a>
+    </div>
+
+    <button class="btn-salir" onclick="cerrarSesion()">Cerrar Sesión</button>
+
+    <script>
+        const rolUsuario = localStorage.getItem('rol_activo');
+        if (rolUsuario !== 'admin') {
+            window.location.href = 'login.html';
+        }
+        
+        document.getElementById('nombre-admin').innerText = localStorage.getItem('usuario_activo') || 'Administrador';
+
+        window.cerrarSesion = function() {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        };
+    </script>
+</body>
+</html>

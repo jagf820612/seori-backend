@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seori - Cuadre de Caja e Historial</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; padding: 30px; color: #111111; margin: 0; }
+        
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #111111;
+            padding-bottom: 15px;
+            max-width: 1000px;
+            margin: 0 auto 25px auto;
+        }
+        .header-container h1 { margin: 0; color: #111111; font-size: 24px; }
+        .logo-pequeno { height: 35px; width: auto; object-fit: contain; }
+
+        .tablero { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 20px; max-width: 1000px; margin: 0 auto; }
+        .tarjeta { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); text-align: center; border: 1px solid #e0e0e0; border-top: 4px solid #111111; }
+        .tarjeta.total { border-top: 4px solid #000000; background: #111111; color: white; grid-column: 1 / -1; }
+        .titulo { font-size: 13px; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #666666; }
+        .tarjeta.total .titulo { color: #cccccc; }
+        .monto { font-size: 28px; font-weight: bold; margin: 0; }
+        
+        .contenedor-tabla { max-width: 1000px; margin: 30px auto 0; background: white; border-radius: 8px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #e0e0e0; overflow-x: auto;}
+        .contenedor-tabla h3 { margin-top: 0; color: #111111; border-bottom: 1px solid #eeeeee; padding-bottom: 10px; font-size: 16px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eeeeee; font-size: 14px; }
+        th { background-color: #f1f2f6; color: #333333; font-weight: 600; text-transform: uppercase; font-size: 12px; }
+        tr:hover { background-color: #f8f9fa; }
+        
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; color: white; }
+        .badge.abierto { background-color: #2ecc71; }
+        .badge.cerrado { background-color: #7f8c8d; }
+        .text-rojo { color: #e74c3c; font-weight: bold; }
+        .text-verde { color: #27ae60; font-weight: bold; }
+
+        .btn-volver { display: block; width: 200px; margin: 30px auto 0; padding: 12px; background-color: #111111; color: white; text-align: center; text-decoration: none; border-radius: 6px; font-weight: 600; transition: background 0.2s; }
+        .btn-volver:hover { background-color: #333333; }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <h1>📊 Cuadre de Caja</h1>
+        <img src="img/logo-seori.png" alt="Seori Logo" class="logo-pequeno">
+    </div>
+    
+    <h3 id="fecha-hoy" style="text-align: center; color: #666666; margin-bottom: 25px; margin-top: 0; font-size: 14px; font-weight: normal;"></h3>
+
+    <div class="tablero">
+        <div class="tarjeta">
+            <div class="titulo">💵 Efectivo</div>
+            <p class="monto" id="total-efectivo">$0</p>
+        </div>
+        <div class="tarjeta">
+            <div class="titulo">📱 Transferencias</div>
+            <p class="monto" id="total-nequi">$0</p>
+        </div>
+        <div class="tarjeta">
+            <div class="titulo">💳 QR BOLD</div>
+            <p class="monto" id="total-qr">$0</p>
+        </div>
+        <div class="tarjeta total">
+            <div class="titulo">💰 TOTAL VENDIDO HOY</div>
+            <p class="monto" id="total-general">$0</p>
+            <p style="margin-top: 5px; font-size: 13px; color: #dddddd;" id="cantidad-pedidos">0 pedidos procesados</p>
+        </div>
+    </div>
+
+    <div class="contenedor-tabla">
+        <h3>Historial de Turnos y Auditoría</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID Turno</th>
+                    <th>Apertura</th>
+                    <th>Cierre</th>
+                    <th>Estado</th>
+                    <th>Base</th>
+                    <th>Ventas</th>
+                    <th>Descuadre</th>
+                    <th>Notas</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-turnos">
+                <tr><td colspan="8" style="text-align: center; color: #666666;">Cargando historial...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <a href="admin.html" class="btn-volver">⬅ Volver al Panel</a>
+
+    <script>
+        const rolUsuario = localStorage.getItem('rol_activo');
+        if (rolUsuario !== 'admin') {
+            window.location.href = 'login.html';
+        }
+
+        document.getElementById('fecha-hoy').innerText = "Resumen del día: " + new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+        async function cargarCuadre() {
+            try {
+                const respuesta = await fetch('https://seori-backend.onrender.com/api/cuadre');
+                const datos = await respuesta.json();
+                document.getElementById('total-efectivo').innerText = '$' + (datos.Efectivo || 0);
+                document.getElementById('total-nequi').innerText = '$' + (datos.Nequi || datos.Transferencia || 0);
+                document.getElementById('total-qr').innerText = '$' + (datos.QR || 0);
+                document.getElementById('total-general').innerText = '$' + (datos.Total_General || 0);
+                document.getElementById('cantidad-pedidos').innerText = `${datos.Cantidad_Pedidos || 0} pedidos procesados`;
+            } catch (error) {
+                console.error("Error cargando el cuadre de hoy:", error);
+            }
+        }
+
+        async function cargarHistorialTurnos() {
+            try {
+                const respuesta = await fetch('https://seori-backend.onrender.com/api/turnos');
+                const turnos = await respuesta.json();
+                const tbody = document.getElementById('tabla-turnos');
+                tbody.innerHTML = '';
+
+                if (turnos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No hay turnos registrados aún.</td></tr>';
+                    return;
+                }
+
+                turnos.forEach(t => {
+                    const fechaApertura = new Date(t.fecha_apertura).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
+                    const fechaCierre = t.fecha_cierre ? new Date(t.fecha_cierre).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '---';
+                    const badgeEstado = t.estado === 'Abierto' ? '<span class="badge abierto">Abierto</span>' : '<span class="badge cerrado">Cerrado</span>';
+                    const ventasTotales = (t.total_ventas_efectivo || 0) + (t.total_ventas_transferencia || 0) + (t.total_ventas_qr || 0);
+                    
+                    let descuadreHTML = '---';
+                    if (t.estado === 'Cerrado') {
+                        if (t.descuadre < 0) {
+                            descuadreHTML = `<span class="text-rojo">-$${Math.abs(t.descuadre)}</span>`;
+                        } else if (t.descuadre > 0) {
+                            descuadreHTML = `<span class="text-verde">+$${t.descuadre} (Sobra)</span>`;
+                        } else {
+                            descuadreHTML = `<span class="text-verde">$0</span>`;
+                        }
+                    }
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>#${t.id}</strong></td>
+                            <td>${fechaApertura}</td>
+                            <td>${fechaCierre}</td>
+                            <td>${badgeEstado}</td>
+                            <td>$${t.monto_base_apertura}</td>
+                            <td>$${ventasTotales}</td>
+                            <td>${descuadreHTML}</td>
+                            <td style="font-size: 12px; color: #666666;">${t.notas_cierre || ''}</td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error("Error al cargar la tabla de turnos:", error);
+                document.getElementById('tabla-turnos').innerHTML = '<tr><td colspan="8" style="text-align: center; color: red;">Error al conectar con la base de datos de turnos.</td></tr>';
+            }
+        }
+
+        cargarCuadre();
+        cargarHistorialTurnos();
+    </script>
+</body>
+</html>

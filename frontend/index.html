@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seori - Punto de Venta (POS)</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; color: #111111; display: flex; height: 100vh; overflow: hidden; }
+        
+        .top-bar { position: absolute; top: 0; left: 0; right: 0; height: 60px; background: #111111; color: white; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; z-index: 10; border-bottom: 1px solid #333333; }
+        .top-bar h2 { margin: 0; color: #ffffff; font-size: 18px; }
+        .btn-salir { background: #333333; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; }
+        .btn-admin { background: #ffffff; color: #111111; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; text-decoration: none; margin-right: 10px; display: none; font-size: 13px; }
+        .btn-cerrar-turno { background: #555555; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; margin-right: 10px; font-size: 13px; }
+
+        .pos-container { display: flex; width: 100%; margin-top: 60px; height: calc(100vh - 60px); }
+
+        .panel-izquierdo { flex: 6.5; display: flex; flex-direction: column; background: #f1f2f6; }
+        .barra-categorias { display: flex; background: white; padding: 15px; gap: 10px; overflow-x: auto; border-bottom: 1px solid #e0e0e0; }
+        .btn-categoria { padding: 10px 20px; background: #ffffff; border: 1px solid #dcdde1; border-radius: 6px; cursor: pointer; font-weight: 600; color: #555555; white-space: nowrap; transition: all 0.2s; font-size: 14px; }
+        .btn-categoria:hover { background: #f8f9fa; }
+        .btn-categoria.activa { background: #111111; color: white; border-color: #111111; }
+
+        .panel-productos { padding: 20px; overflow-y: auto; flex: 1; }
+        .grid-productos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .card-producto { background: white; border-radius: 8px; padding: 15px; text-align: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #e0e0e0; display: flex; flex-direction: column; justify-content: space-between; height: 140px; }
+        .card-producto:active { transform: scale(0.97); }
+        .card-producto h4 { margin: 0 0 5px 0; font-size: 15px; color: #111111; }
+        .card-producto p { margin: 0; font-size: 13px; color: #666666; font-weight: 500; }
+        .card-producto .precio { margin-top: 10px; font-size: 16px; color: #111111; font-weight: bold; }
+
+        .panel-ticket { flex: 3.5; background: white; border-left: 1px solid #e0e0e0; display: flex; flex-direction: column; padding: 20px; }
+        .lista-ticket { flex: 1; overflow-y: auto; border-bottom: 2px dashed #eeeeee; margin-bottom: 20px; padding-right: 10px; }
+        .item-ticket { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #f8f9fa; }
+        .item-info { flex: 1; }
+        .item-info strong { display: block; font-size: 14px; color: #111111; }
+        .item-info small { color: #666666; font-size: 12px; display: block; margin-top: 3px; }
+        .item-controles { display: flex; align-items: center; gap: 8px; margin-top: 5px;}
+        .btn-cant { background: #111111; color: white; border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-weight: bold; font-size: 12px; }
+        
+        .zona-cobro { text-align: right; }
+        .total-texto { font-size: 20px; color: #333333; margin-bottom: 10px; }
+        .total-monto { font-size: 28px; color: #111111; font-weight: bold; }
+        .btn-cobrar { width: 100%; padding: 14px; background: #111111; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        .btn-cobrar:hover { background: #333333; }
+
+        /* MODALES */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; }
+        .modal-apertura-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 200; justify-content: center; align-items: center; }
+        
+        .modal-box { background: white; width: 500px; max-width: 90%; border-radius: 8px; padding: 25px; box-shadow: 0 6px 20px rgba(0,0,0,0.1); max-height: 90vh; overflow-y: auto; border: 1px solid #e0e0e0; }
+        .modal-box h3 { margin-top: 0; color: #111111; border-bottom: 1px solid #eeeeee; padding-bottom: 10px; font-size: 18px; }
+        .modal-section { margin-bottom: 15px; background: #f8f9fa; padding: 12px; border-radius: 6px; border-left: 4px solid #111111; }
+        .modal-section h4 { margin: 0 0 10px 0; color: #111111; font-size: 14px; }
+        .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .check-item { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; padding: 4px 0; color: #333333; }
+        .radio-sabor { transform: scale(1.2); margin-right: 5px; }
+        .modal-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; border-top: 1px solid #eeeeee; padding-top: 15px; }
+        .modal-total { font-size: 18px; font-weight: bold; color: #111111; }
+        .btn-modal-add { background: #111111; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-modal-cancel { background: #7f8c8d; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <h2>Seori POS</h2>
+        <div>
+            <span id="nombre-cajero" style="margin-right: 15px; font-weight: 500; font-size: 14px;"></span>
+            <button class="btn-cerrar-turno" onclick="iniciarCierreTurno()">Cerrar Turno</button>
+            <a href="admin.html" id="btn-admin" class="btn-admin">⚙️ Panel Admin</a>
+            <button class="btn-salir" onclick="cerrarSesion()">Cerrar Sesión</button>
+        </div>
+    </div>
+
+    <div class="pos-container">
+        <div class="panel-izquierdo">
+            <div class="barra-categorias">
+                <button class="btn-categoria activa" onclick="filtrarCategoria(1, this)">🍧 Bingsu</button>
+                <button class="btn-categoria" onclick="filtrarCategoria(2, this)">🍦 K-Soft</button>
+                <button class="btn-categoria" onclick="filtrarCategoria(3, this)">☕ K-Coffee</button>
+                <button class="btn-categoria" onclick="filtrarCategoria(4, this)">🍓 Toppings</button>
+                <button class="btn-categoria" onclick="filtrarCategoria(5, this)">🥤 Bebidas Frías</button>
+                <button class="btn-categoria" onclick="filtrarCategoria(6, this)">🎎 K-Merch</button>
+            </div>
+            <div class="panel-productos">
+                <div class="grid-productos" id="grid-productos">
+                    <h3 style="grid-column: 1 / -1; text-align: center; color: #666666;">Cargando inventario...</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-ticket">
+            <h3 style="margin-top: 0; text-align: center; border-bottom: 1px solid #eeeeee; padding-bottom: 10px; font-size: 16px;">Ticket Actual <span id="label-turno" style="color:#666666; font-size:13px;"></span></h3>
+            <div class="lista-ticket" id="lista-ticket"></div>
+            <div class="zona-cobro">
+                <div class="total-texto">Total: <span class="total-monto" id="total-monto">$0</span></div>
+                
+                <select id="metodo_pago" style="width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 6px; font-size: 15px; border: 1px solid #dcdde1; outline: none;">
+                    <option value="Efectivo">💵 Efectivo</option>
+                    <option value="Transferencia">📱 Transferencia (Nequi/Bancolombia)</option>
+                    <option value="QR">🔳 QR Bold</option>
+                </select>
+
+                <button class="btn-cobrar" onclick="procesarVenta()" id="btn-cobrar">Cobrar Venta</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PERSONALIZACION -->
+    <div class="modal-overlay" id="modal-personalizacion">
+        <div class="modal-box">
+            <h3>Preparar: <span id="modal-nombre"></span></h3>
+            <div class="modal-section" id="sec-sabor">
+                <h4>Sabor de Helado Base</h4>
+                <div class="check-grid">
+                    <label class="check-item"><input type="radio" name="saborHelado" value="Vainilla" class="radio-sabor" checked> Vainilla (Clásico)</label>
+                    <label class="check-item"><input type="radio" name="saborHelado" value="Sabor del Día" class="radio-sabor"> Sabor del Día</label>
+                </div>
+            </div>
+            <div class="modal-section" id="sec-toppings">
+                <h4>Toppings (2 Gratis, luego según DB)</h4>
+                <div class="check-grid" id="modal-lista-toppings"></div>
+            </div>
+            <div class="modal-section" id="sec-salsas">
+                <h4>Salsas (1 Gratis, extra $1000)</h4>
+                <div class="check-grid">
+                    <label class="check-item"><input type="checkbox" class="chk-salsa" value="Chocolate" onchange="calcularExtras()"> Chocolate</label>
+                    <label class="check-item"><input type="checkbox" class="chk-salsa" value="Fresa" onchange="calcularExtras()"> Fresa</label>
+                    <label class="check-item"><input type="checkbox" class="chk-salsa" value="Caramelo" onchange="calcularExtras()"> Caramelo</label>
+                    <label class="check-item"><input type="checkbox" class="chk-salsa" value="Leche Condensada" onchange="calcularExtras()"> L. Condensada</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-cancel" onclick="cerrarModal()">Cancelar</button>
+                <div class="modal-total">Total: $<span id="modal-total-calc"></span></div>
+                <button class="btn-modal-add" onclick="confirmarPersonalizacion()">Agregar al Ticket</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE APERTURA -->
+    <div class="modal-apertura-overlay" id="modal-apertura">
+        <div class="modal-box" style="text-align: center;">
+            <h2 style="color: #111111; margin-top: 0; font-size: 22px;">💰 Apertura de Caja</h2>
+            <p style="color: #555555; font-size: 14px; margin-bottom: 25px;">No hay un turno abierto. Por favor, ingresa el dinero físico que hay en la gaveta para base de cambios.</p>
+            <div style="text-align: left; margin-bottom: 25px;">
+                <label style="font-weight: 600; color: #555555; font-size: 13px;">Monto Base de Apertura:</label>
+                <input type="number" id="input-monto-base" placeholder="Ej: 50000" style="width: 100%; padding: 12px; margin-top: 8px; font-size: 18px; border: 1px solid #dcdde1; border-radius: 6px; box-sizing: border-box; text-align: center;">
+            </div>
+            <button class="btn-cobrar" style="background: #111111;" onclick="abrirCajaTurno()" id="btn-abrir-caja">Abrir Turno y Empezar a Vender</button>
+        </div>
+    </div>
+
+    <!-- MODAL DE CIERRE DE CAJA -->
+    <div class="modal-overlay" id="modal-cierre">
+        <div class="modal-box" style="text-align: center;">
+            <h2 style="color: #111111; margin-top: 0; font-size: 22px;">🔒 Cierre de Turno</h2>
+            <p style="color: #555555; font-size: 14px; margin-bottom: 20px;">Cuenta el dinero físico que hay en la gaveta y digita el monto total (incluyendo tu base inicial).</p>
+            
+            <div style="text-align: left; margin-bottom: 15px;">
+                <label style="font-weight: 600; color: #555555; font-size: 13px;">Efectivo Físico Contado:</label>
+                <input type="number" id="input-efectivo-fisico" placeholder="Ej: 150000" style="width: 100%; padding: 12px; margin-top: 8px; font-size: 18px; border: 1px solid #dcdde1; border-radius: 6px; box-sizing: border-box; text-align: center;">
+            </div>
+
+            <div style="text-align: left; margin-bottom: 25px;">
+                <label style="font-weight: 600; color: #555555; font-size: 13px;">Notas o Novedades (Opcional):</label>
+                <textarea id="input-notas-cierre" rows="2" placeholder="Faltó dinero por X razón..." style="width: 100%; padding: 10px; margin-top: 8px; font-size: 14px; border: 1px solid #dcdde1; border-radius: 6px; box-sizing: border-box; outline: none;"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-modal-cancel" style="flex: 1;" onclick="document.getElementById('modal-cierre').style.display='none'">Cancelar</button>
+                <button class="btn-cobrar" style="background: #111111; flex: 2;" onclick="procesarCierreTurno()" id="btn-procesar-cierre">Confirmar Cierre</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const rolActivo = localStorage.getItem('rol_activo');
+        
+        // CANDADO DE SEGURIDAD BLINDADO
+        if (!rolActivo) {
+            window.location.href = 'login.html';
+        } else if (rolActivo === 'cocina') {
+            window.location.href = 'preparacion.html';
+        } else if (rolActivo !== 'admin' && rolActivo !== 'caja') {
+            window.location.href = 'login.html';
+        }
+
+        document.getElementById('nombre-cajero').innerText = "Cajero: " + localStorage.getItem('usuario_activo');
+        if (rolActivo === 'admin') document.getElementById('btn-admin').style.display = 'inline-block';
+        window.cerrarSesion = () => { localStorage.clear(); window.location.href = 'login.html'; };
+
+        let todosLosProductos = [];
+        let carrito = [];
+        let itemTemporal = null; 
+        let turnoActualId = null;
+
+        async function iniciarSistema() {
+            try {
+                const respuesta = await fetch('https://seori-backend.onrender.com/api/turnos/activo');
+                const data = await respuesta.json();
+                if (data.activo) {
+                    turnoActualId = data.turno.id;
+                    document.getElementById('label-turno').innerText = `(Turno #${turnoActualId})`;
+                    cargarInventario(); 
+                } else {
+                    document.getElementById('modal-apertura').style.display = 'flex';
+                }
+            } catch (error) {
+                console.error("Error conectando:", error);
+                alert("No se pudo verificar el estado de la caja.");
+            }
+        }
+
+        window.abrirCajaTurno = async function() {
+            const monto = parseFloat(document.getElementById('input-monto-base').value);
+            if (isNaN(monto) || monto < 0) return alert("Ingresa una base válida.");
+            
+            const btn = document.getElementById('btn-abrir-caja');
+            btn.innerText = "Abriendo..."; btn.disabled = true;
+
+            try {
+                const idUsuario = localStorage.getItem('usuario_id') || 1; 
+                const res = await fetch('https://seori-backend.onrender.com/api/turnos/abrir', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario_id: idUsuario, monto_base_apertura: monto })
+                });
+                if(!res.ok) throw new Error();
+                const data = await res.json();
+                
+                turnoActualId = data.turno.id;
+                document.getElementById('label-turno').innerText = `(Turno #${turnoActualId})`;
+                alert(`¡Caja abierta con éxito!\nBase: $${monto}`);
+                document.getElementById('modal-apertura').style.display = 'none';
+                cargarInventario();
+            } catch (e) {
+                alert("Error al registrar apertura.");
+                btn.innerText = "Abrir Turno y Empezar a Vender"; btn.disabled = false;
+            }
+        }
+
+        window.iniciarCierreTurno = function() {
+            if (!turnoActualId) return alert("No hay un turno abierto para cerrar.");
+            document.getElementById('input-efectivo-fisico').value = '';
+            document.getElementById('input-notas-cierre').value = '';
+            document.getElementById('modal-cierre').style.display = 'flex';
+        }
+
+        window.procesarCierreTurno = async function() {
+            const fisico = parseFloat(document.getElementById('input-efectivo-fisico').value);
+            if (isNaN(fisico) || fisico < 0) return alert("Ingresa el dinero físico contado.");
+
+            const btn = document.getElementById('btn-procesar-cierre');
+            btn.innerText = "Calculando Cuadre..."; btn.disabled = true;
+            const notas = document.getElementById('input-notas-cierre').value;
+
+            try {
+                const res = await fetch('https://seori-backend.onrender.com/api/turnos/cerrar', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ turno_id: turnoActualId, efectivo_fisico_contado: fisico, notas_cierre: notas })
+                });
+                if(!res.ok) throw new Error();
+                const data = await res.json();
+                const t = data.turno;
+                
+                let msg = `========================\n`;
+                msg += `📋 RESUMEN DE TURNO #${t.id}\n`;
+                msg += `========================\n`;
+                msg += `💰 Base Inicial: $${t.monto_base_apertura}\n`;
+                msg += `💵 Ventas Efectivo: $${t.total_ventas_efectivo}\n`;
+                msg += `📱 Transferencias: $${t.total_ventas_transferencia}\n`;
+                msg += `🔳 QR Bold: $${t.total_ventas_qr}\n`;
+                msg += `------------------------\n`;
+                msg += `📉 Efectivo Esperado: $${t.efectivo_teorico}\n`;
+                msg += `🤚 Efectivo Contado: $${t.efectivo_fisico_contado}\n`;
+                msg += `⚠️ Descuadre: $${t.descuadre}\n`;
+                
+                alert(msg);
+                window.location.reload();
+            } catch (e) {
+                alert("Error al procesar el cierre de caja.");
+                btn.innerText = "Confirmar Cierre"; btn.disabled = false;
+            }
+        }
+
+        async function cargarInventario() {
+            try {
+                const res = await fetch('https://seori-backend.onrender.com/api/productos');
+                todosLosProductos = await res.json();
+                renderizarProductos(1);
+            } catch (e) {
+                document.getElementById('grid-productos').innerHTML = '<h3 style="color: red; text-align: center;">Error de conexión.</h3>';
+            }
+        }
+
+        window.filtrarCategoria = function(categoriaId, boton) {
+            document.querySelectorAll('.btn-categoria').forEach(btn => btn.classList.remove('activa'));
+            boton.classList.add('activa');
+            renderizarProductos(categoriaId);
+        }
+
+        function renderizarProductos(categoriaId) {
+            const grid = document.getElementById('grid-productos');
+            grid.innerHTML = ''; 
+            const filtrados = todosLosProductos.filter(p => p.categoria_id === categoriaId && p.disponible);
+            if (filtrados.length === 0) return grid.innerHTML = '<h4>No hay productos.</h4>';
+            
+            filtrados.forEach(prod => {
+                if (!prod.producto_variantes) return;
+                prod.producto_variantes.forEach(variante => {
+                    const btn = document.createElement('div');
+                    btn.className = 'card-producto';
+                    if (categoriaId === 1 || categoriaId === 2) {
+                        btn.onclick = () => abrirModalPersonalizacion(categoriaId, prod.id, variante.id, prod.nombre_producto, variante.nombre_variante, variante.precio);
+                    } else {
+                        btn.onclick = () => agregarAlCarrito(prod.id, variante.id, prod.nombre_producto, variante.nombre_variante, variante.precio, "");
+                    }
+                    btn.innerHTML = `<div><h4>${prod.nombre_producto}</h4><p>${variante.nombre_variante}</p></div><div class="precio">$${variante.precio}</div>`;
+                    grid.appendChild(btn);
+                });
+            });
+        }
+
+        function abrirModalPersonalizacion(categoriaId, idProducto, idVariante, nombreProd, nombreVar, precioBase) {
+            itemTemporal = { idProducto, idVariante, nombreProd, nombreVar, precioBase, categoriaId };
+            document.getElementById('modal-nombre').innerText = `${nombreProd} (${nombreVar})`;
+            document.getElementById('modal-total-calc').innerText = precioBase;
+            document.querySelector('input[name="saborHelado"][value="Vainilla"]').checked = true;
+            document.querySelectorAll('.chk-salsa').forEach(chk => chk.checked = false);
+
+            document.getElementById('sec-toppings').style.display = 'block'; 
+            document.getElementById('sec-salsas').style.display = 'block';
+            
+            const cont = document.getElementById('modal-lista-toppings'); 
+            cont.innerHTML = '';
+            
+            todosLosProductos.filter(p => p.categoria_id === 4 && p.disponible).forEach(top => {
+                if(top.producto_variantes && top.producto_variantes.length > 0) {
+                    cont.innerHTML += `
+                        <label class="check-item">
+                            <input type="checkbox" class="chk-topping" value="${top.nombre_producto}" data-precio="${top.producto_variantes[0].precio}"> 
+                            ${top.nombre_producto} (+$${top.producto_variantes[0].precio})
+                        </label>`;
+                }
+            });
+
+            document.querySelectorAll('.chk-topping, .chk-salsa').forEach(chk => {
+                chk.onchange = calcularExtras;
+            });
+
+            document.getElementById('modal-personalizacion').style.display = 'flex';
+        }
+
+        function calcularExtras() {
+            let extra = 0;
+            if (itemTemporal.categoriaId === 2) {
+                const tops = document.querySelectorAll('.chk-topping:checked');
+                tops.forEach((chk, i) => { 
+                    if (i >= 2) extra += parseFloat(chk.getAttribute('data-precio') || 0); 
+                });
+            } else if (itemTemporal.categoriaId === 1) {
+                const tops = document.querySelectorAll('.chk-topping:checked');
+                tops.forEach(chk => { 
+                    extra += parseFloat(chk.getAttribute('data-precio') || 0); 
+                });
+            }
+
+            const salsas = document.querySelectorAll('.chk-salsa:checked');
+            if (salsas.length > 1) {
+                extra += (salsas.length - 1) * 1000;
+            }
+
+            const totalFinal = itemTemporal.precioBase + extra;
+            document.getElementById('modal-total-calc').innerText = totalFinal;
+        }
+
+        window.cerrarModal = () => { document.getElementById('modal-personalizacion').style.display = 'none'; itemTemporal = null; }
+
+        window.confirmarPersonalizacion = () => {
+            let notas = [`Base: ${document.querySelector('input[name="saborHelado"]:checked').value}`];
+            if (itemTemporal.categoriaId === 1 || itemTemporal.categoriaId === 2) {
+                const top = Array.from(document.querySelectorAll('.chk-topping:checked')).map(c => c.value);
+                const sal = Array.from(document.querySelectorAll('.chk-salsa:checked')).map(c => c.value);
+                if(top.length) notas.push("Toppings: " + top.join(', '));
+                if(sal.length) notas.push("Salsas: " + sal.join(', '));
+            }
+            
+            const texto = notas.length ? " | " + notas.join(' | ') : "";
+            agregarAlCarrito(itemTemporal.idProducto, itemTemporal.idVariante, itemTemporal.nombreProd, itemTemporal.nombreVar, parseFloat(document.getElementById('modal-total-calc').innerText), texto);
+            cerrarModal();
+        }
+
+        function agregarAlCarrito(idProducto, idVariante, nombreProd, nombreVar, precioFinal, notasExtras) {
+            carrito.push({
+                idProducto, idVariante, nombre: nombreProd, variante: nombreVar, 
+                precio: parseFloat(precioFinal), cantidad: 1, notas: notasExtras ? notasExtras.replace(' | ', '') : ''
+            });
+            actualizarTicket();
+        }
+
+        window.cambiarCantidad = (i, d) => { carrito[i].cantidad += d; if (carrito[i].cantidad <= 0) carrito.splice(i, 1); actualizarTicket(); }
+
+        function actualizarTicket() {
+            const lista = document.getElementById('lista-ticket'); lista.innerHTML = ''; let total = 0;
+            carrito.forEach((item, i) => {
+                const sub = item.precio * item.cantidad; total += sub;
+                lista.innerHTML += `<div class="item-ticket"><div class="item-info"><strong>${item.nombre}</strong><small>${item.notas ? `${item.variante} | ${item.notas}` : item.variante}</small></div><div style="display:flex; flex-direction:column; align-items:flex-end;"><div class="item-controles"><button class="btn-cant" onclick="cambiarCantidad(${i}, -1)">-</button><span style="font-weight: bold; width: 20px; text-align: center;">${item.cantidad}</span><button class="btn-cant" onclick="cambiarCantidad(${i}, 1)">+</button></div><div style="font-weight: bold; margin-top: 5px;">$${sub}</div></div></div>`;
+            });
+            document.getElementById('total-monto').innerText = `$${total}`;
+        }
+
+        window.procesarVenta = async () => {
+            if (!carrito.length) return alert("Ticket vacío.");
+            const btn = document.getElementById('btn-cobrar'); btn.innerText = "Procesando..."; btn.disabled = true;
+            const metodo = document.getElementById('metodo_pago').value;
+            let total = 0;
+            const detalles = carrito.map(i => { const sub = i.precio * i.cantidad; total += sub; return { variante_id: i.idVariante, cantidad: i.cantidad, subtotal: sub, nombre: i.nombre, variante: i.variante, notas: i.notas }; });
+            try {
+                const res = await fetch('https://seori-backend.onrender.com/api/pedidos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ turno_id: turnoActualId, total: total, metodo_pago: metodo, detalles: detalles }) });
+                if(!res.ok) throw new Error();
+                alert(`¡Venta cobrada! ($${total})`);
+                carrito = []; actualizarTicket();
+            } catch (e) { alert("Error al cobrar."); } finally { btn.innerText = "Cobrar Venta"; btn.disabled = false; }
+        }
+
+        iniciarSistema();
+    </script>
+</body>
+</html>
