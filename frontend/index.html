@@ -411,18 +411,99 @@
             document.getElementById('total-monto').innerText = `$${total}`;
         }
 
-        window.procesarVenta = async () => {
+function imprimirTicket(carritoAImprimir, totalPagar, metodoPago) {
+            // Abre una ventana pequeña en blanco
+            const ventana = window.open('', '_blank', 'width=400,height=600');
+            
+            // Empezamos a construir el diseño del ticket
+            let html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Ticket Seori</title>
+                <style>
+                    /* Estilos optimizados para impresora térmica de 80mm */
+                    @page { margin: 0; }
+                    body { font-family: 'Courier New', Courier, monospace; width: 80mm; margin: 0; padding: 10px; font-size: 12px; color: #000; }
+                    .center { text-align: center; }
+                    .bold { font-weight: bold; }
+                    .line { border-bottom: 1px dashed #000; margin: 5px 0; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+                    td { padding: 2px 0; vertical-align: top; }
+                    .right { text-align: right; }
+                </style>
+            </head>
+            <body>
+                <div class="center bold" style="font-size: 16px; margin-bottom: 5px;">SEORI KOREAN ICE</div>
+                <div class="center">Caucasia, Antioquia</div>
+                <div class="center">------------------------</div>
+                <div class="center bold">TICKET DE VENTA</div>
+                <div class="center">------------------------</div>
+                <div style="margin-bottom: 10px;">
+                    Fecha: ${new Date().toLocaleString()}
+                </div>
+                <table>
+            `;
+
+            // Agregamos cada producto del carrito al ticket
+            carritoAImprimir.forEach(item => {
+                html += `
+                    <tr>
+                        <td colspan="2" class="bold">${item.cantidad}x ${item.nombre}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding-left: 10px; font-size: 11px;">${item.variante} ${item.notas ? '<br>(' + item.notas + ')' : ''}</td>
+                        <td class="right">$${item.precio * item.cantidad}</td>
+                    </tr>
+                `;
+            });
+
+            // Agregamos los totales y el cierre
+            html += `
+                </table>
+                <div class="line"></div>
+                <div class="bold" style="font-size: 16px; text-align: right;">TOTAL: $${totalPagar}</div>
+                <div class="right" style="font-size: 11px; margin-top: 5px;">Método de pago: ${metodoPago}</div>
+                <div class="center" style="margin-top: 20px; font-size: 11px;">¡Gracias por tu compra!</div>
+                
+                <script>
+                    // Al cargar la ventana, lanza la impresión y luego se cierra
+                    window.onload = function() {
+                        window.print();
+                        window.close();
+                    }
+                </script>
+            </body>
+            </html>
+            `;
+
+            // Escribimos el código en la ventana
+            ventana.document.write(html);
+            ventana.document.close();
+        }
+
+window.procesarVenta = async () => {
             if (!carrito.length) return alert("Ticket vacío.");
             const btn = document.getElementById('btn-cobrar'); btn.innerText = "Procesando..."; btn.disabled = true;
             const metodo = document.getElementById('metodo_pago').value;
             let total = 0;
             const detalles = carrito.map(i => { const sub = i.precio * i.cantidad; total += sub; return { variante_id: i.idVariante, cantidad: i.cantidad, subtotal: sub, nombre: i.nombre, variante: i.variante, notas: i.notas }; });
+            
             try {
                 const res = await fetch('https://seori-backend.onrender.com/api/pedidos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ turno_id: turnoActualId, total: total, metodo_pago: metodo, detalles: detalles }) });
                 if(!res.ok) throw new Error();
+                
+                // --- AQUÍ ESTÁ LA MAGIA: Llamamos a la función de imprimir antes de vaciar el carrito ---
+                imprimirTicket(carrito, total, metodo);
+
                 alert(`¡Venta cobrada! ($${total})`);
                 carrito = []; actualizarTicket();
-            } catch (e) { alert("Error al cobrar."); } finally { btn.innerText = "Cobrar Venta"; btn.disabled = false; }
+            } catch (e) { 
+                alert("Error al cobrar."); 
+            } finally { 
+                btn.innerText = "Cobrar Venta"; 
+                btn.disabled = false; 
+            }
         }
 
         iniciarSistema();
