@@ -472,7 +472,7 @@ function imprimirTicket(carritoAImprimir, totalPagar, metodoPago) {
                         window.print();
                         window.close();
                     }
-                </script>
+                <\/script>
             </body>
             </html>
             `;
@@ -482,7 +482,7 @@ function imprimirTicket(carritoAImprimir, totalPagar, metodoPago) {
             ventana.document.close();
         }
 
-window.procesarVenta = async () => {
+        window.procesarVenta = async () => {
             if (!carrito.length) return alert("Ticket vacío.");
             const btn = document.getElementById('btn-cobrar'); btn.innerText = "Procesando..."; btn.disabled = true;
             const metodo = document.getElementById('metodo_pago').value;
@@ -505,7 +505,6 @@ window.procesarVenta = async () => {
                 btn.disabled = false; 
             }
         }
-
         iniciarSistema();
     </script>
 </body>
