@@ -417,39 +417,53 @@ function imprimirTicket(carritoAImprimir, totalPagar, metodoPago) {
             
             // Empezamos a construir el diseño del ticket
             // Empezamos a construir el diseño del ticket
+// Empezamos a construir el diseño del ticket
             let html = `
             <!DOCTYPE html>
             <html>
             <head>
                 <title>Ticket Seori</title>
                 <style>
-                    /* Estilos optimizados con márgenes de seguridad */
                     @page { margin: 0; }
                     body { 
                         font-family: 'Courier New', Courier, monospace; 
-                        width: 72mm; /* Reducido para evitar el corte del rodillo */
+                        width: 65mm; 
                         margin: 0 auto; 
-                        padding: 2mm 4mm; /* Margen interno */
-                        font-size: 12px; 
+                        padding: 2mm 5mm 2mm 0; 
+                        font-size: 13px; 
                         color: #000; 
                     }
                     .center { text-align: center; }
                     .bold { font-weight: bold; }
                     .line { border-bottom: 1px dashed #000; margin: 5px 0; }
-                    /* table-layout: fixed evita que los textos largos desarmen la tabla */
                     table { width: 100%; border-collapse: collapse; margin-bottom: 10px; table-layout: fixed; }
                     td { padding: 2px 0; vertical-align: top; word-wrap: break-word; }
-                    .col-precio { text-align: right; width: 25%; white-space: nowrap; font-weight: bold; }
+                    
+                    /* Estilo para el logo */
+                    .logo-ticket { 
+                        width: 140px; /* Tamaño ideal para 80mm */
+                        display: block; 
+                        margin: 0 auto 5px auto; 
+                        /* Filtro para asegurar que se imprima fuerte y sin grises */
+                        filter: grayscale(100%) contrast(200%);
+                    }
+                    
+                    .titulo-seori { font-size: 22px; font-weight: bold; margin-bottom: 5px; text-align: center; }
+                    .desc-producto { padding-left: 5px; font-size: 13px; font-weight: bold; }
+                    .col-precio { text-align: right; width: 30%; white-space: nowrap; font-weight: bold; padding-right: 5px; }
                     .right { text-align: right; }
                 </style>
             </head>
             <body>
-                <div class="center bold" style="font-size: 16px; margin-bottom: 5px;">SEORI KOREAN ICE</div>
+                <!-- AQUÍ INYECTAMOS EL LOGO DESDE TU CARPETA IMG -->
+                <img src="https://seori-backend.onrender.com/img/logo-seori.png" class="logo-ticket">
+                
+                <div class="titulo-seori">SEORI KOREAN ICE</div>
                 <div class="center">Caucasia, Antioquia</div>
                 <div class="center">------------------------</div>
-                <div class="center bold">TICKET DE VENTA</div>
+                <div class="center bold" style="font-size: 15px;">TICKET DE VENTA</div>
                 <div class="center">------------------------</div>
-                <div style="margin-bottom: 10px;">
+                <div style="margin-bottom: 10px; font-weight: bold;">
                     Fecha: ${new Date().toLocaleString()}
                 </div>
                 <table>
@@ -459,10 +473,10 @@ function imprimirTicket(carritoAImprimir, totalPagar, metodoPago) {
             carritoAImprimir.forEach(item => {
                 html += `
                     <tr>
-                        <td colspan="2" class="bold">${item.cantidad}x ${item.nombre}</td>
+                        <td colspan="2" class="bold" style="font-size: 15px;">${item.cantidad}x ${item.nombre}</td>
                     </tr>
                     <tr>
-                        <td style="padding-left: 10px; font-size: 11px;">${item.variante} ${item.notas ? '<br>(' + item.notas + ')' : ''}</td>
+                        <td class="desc-producto">${item.variante} ${item.notas ? '<br>(' + item.notas + ')' : ''}</td>
                         <td class="col-precio">$${item.precio * item.cantidad}</td>
                     </tr>
                 `;
@@ -472,12 +486,11 @@ function imprimirTicket(carritoAImprimir, totalPagar, metodoPago) {
             html += `
                 </table>
                 <div class="line"></div>
-                <div class="bold" style="font-size: 16px; text-align: right;">TOTAL: $${totalPagar}</div>
-                <div class="right" style="font-size: 11px; margin-top: 5px;">Método de pago: ${metodoPago}</div>
-                <div class="center" style="margin-top: 20px; font-size: 11px;">¡Gracias por tu compra!</div>
+                <div class="bold right" style="font-size: 17px; padding-right: 5px;">TOTAL: $${totalPagar}</div>
+                <div class="right" style="font-size: 13px; font-weight: bold; margin-top: 5px; padding-right: 5px;">Pago: ${metodoPago}</div>
+                <div class="center" style="margin-top: 20px; font-size: 14px; font-weight: bold;">¡Gracias por tu compra!</div>
                 
                 <script>
-                    // Al cargar la ventana, lanza la impresión y luego se cierra
                     window.onload = function() {
                         window.print();
                         window.close();
