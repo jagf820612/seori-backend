@@ -411,14 +411,11 @@
             document.getElementById('total-monto').innerText = `$${total}`;
         }
 
-function imprimirTicket(carritoAImprimir, totalPagar, metodoPago) {
+function imprimirTicket(carritoAImprimir, totalPagar, metodoPago, numeroPedido) {
             // Abre una ventana pequeña en blanco
             const ventana = window.open('', '_blank', 'width=400,height=600');
             
             // Empezamos a construir el diseño del ticket
-            // Empezamos a construir el diseño del ticket
-// Empezamos a construir el diseño del ticket
-// Empezamos a construir el diseño del ticket
             let html = `
             <!DOCTYPE html>
             <html>
@@ -459,7 +456,8 @@ function imprimirTicket(carritoAImprimir, totalPagar, metodoPago) {
                 
                 <div class="center">Caucasia, Antioquia</div>
                 <div class="center">------------------------</div>
-                <div class="center bold" style="font-size: 15px;">TICKET DE VENTA</div>
+                <!-- AGREGAMOS EL NÚMERO DE PEDIDO AL TÍTULO -->
+                <div class="center bold" style="font-size: 17px;">PEDIDO #${numeroPedido}</div>
                 <div class="center">------------------------</div>
                 <div style="margin-bottom: 10px; font-weight: bold;">
                     Fecha: ${new Date().toLocaleString()}
@@ -514,8 +512,12 @@ function imprimirTicket(carritoAImprimir, totalPagar, metodoPago) {
                 const res = await fetch('https://seori-backend.onrender.com/api/pedidos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ turno_id: turnoActualId, total: total, metodo_pago: metodo, detalles: detalles }) });
                 if(!res.ok) throw new Error();
                 
-                // --- AQUÍ ESTÁ LA MAGIA: Llamamos a la función de imprimir antes de vaciar el carrito ---
-                imprimirTicket(carrito, total, metodo);
+                // ATRAPAMOS EL ID DEL PEDIDO QUE RESPONDE EL SERVIDOR
+                const data = await res.json();
+                const numeroPedido = data.pedido_id;
+                
+                // ENVIAMOS EL NÚMERO A LA FUNCIÓN DE IMPRESIÓN
+                imprimirTicket(carrito, total, metodo, numeroPedido);
 
                 alert(`¡Venta cobrada! ($${total})`);
                 carrito = []; actualizarTicket();
