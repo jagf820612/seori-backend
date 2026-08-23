@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es">f
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -418,6 +418,7 @@ function imprimirTicket(carritoAImprimir, totalPagar, metodoPago) {
             // Empezamos a construir el diseño del ticket
             // Empezamos a construir el diseño del ticket
 // Empezamos a construir el diseño del ticket
+// Empezamos a construir el diseño del ticket
             let html = `
             <!DOCTYPE html>
             <html>
@@ -441,14 +442,12 @@ function imprimirTicket(carritoAImprimir, totalPagar, metodoPago) {
                     
                     /* Estilo para el logo */
                     .logo-ticket { 
-                        width: 140px; /* Tamaño ideal para 80mm */
+                        width: 140px; 
                         display: block; 
                         margin: 0 auto 5px auto; 
-                        /* Filtro para asegurar que se imprima fuerte y sin grises */
                         filter: grayscale(100%) contrast(200%);
                     }
                     
-                    .titulo-seori { font-size: 22px; font-weight: bold; margin-bottom: 5px; text-align: center; }
                     .desc-producto { padding-left: 5px; font-size: 13px; font-weight: bold; }
                     .col-precio { text-align: right; width: 30%; white-space: nowrap; font-weight: bold; padding-right: 5px; }
                     .right { text-align: right; }
@@ -458,7 +457,6 @@ function imprimirTicket(carritoAImprimir, totalPagar, metodoPago) {
                 <!-- AQUÍ INYECTAMOS EL LOGO DESDE TU CARPETA IMG -->
                 <img src="https://seori-backend.onrender.com/img/logo-seori.png" class="logo-ticket">
                 
-                <div class="titulo-seori">SEORI KOREAN ICE</div>
                 <div class="center">Caucasia, Antioquia</div>
                 <div class="center">------------------------</div>
                 <div class="center bold" style="font-size: 15px;">TICKET DE VENTA</div>
