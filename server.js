@@ -218,6 +218,70 @@ app.get('/api/cuadre', async (req, res) => {
 });
 
 
+// --- NUEVA RUTA: Obtener pedidos pendientes para la tablet (Rescate tras hibernación) ---
+app.get('/api/pedidos/pendientes', async (req, res) => {
+    try {
+        // 1. Buscamos pedidos con estado 'Pendiente', trayendo sus detalles y nombres unidos
+        const { data: pedidos, error } = await supabase
+            .from('pedidos')
+            .select(`
+                id,
+                detalle_pedidos (
+                    cantidad,
+                    notas_especiales,
+                    producto_variantes (
+                        nombre_variante,
+                        productos (
+                            nombre_producto,
+                            categoria_id
+                        )
+                    )
+                )
+            `)
+            .eq('estado', 'Pendiente')
+            .order('fecha_hora', { ascending: true }); // Ordenamos de más antiguo a más nuevo
+
+        if (error) throw error;
+
+        // 2. Formateamos los datos para que sean EXACTAMENTE iguales a los que envía el Socket.io
+        const pedidosFormateados = [];
+
+        for (let pedido of pedidos) {
+            let detallesParaCocina = [];
+
+            // Revisamos cada ítem del pedido
+            for (let detalle of pedido.detalle_pedidos) {
+                const categoria = detalle.producto_variantes?.productos?.categoria_id;
+                
+                // 3. Filtramos para NO enviar el K-Merch (Categoría 6) a la cocina
+                if (categoria !== 6) {
+                    detallesParaCocina.push({
+                        cantidad: detalle.cantidad,
+                        nombre: detalle.producto_variantes?.productos?.nombre_producto,
+                        variante: detalle.producto_variantes?.nombre_variante,
+                        notas: detalle.notas_especiales
+                    });
+                }
+            }
+
+            // 4. Solo lo agregamos a la lista de la tablet si quedaron productos por cocinar
+            if (detallesParaCocina.length > 0) {
+                pedidosFormateados.push({
+                    pedido_id: pedido.id,
+                    detalles: detallesParaCocina
+                });
+            }
+        }
+
+        // 5. Enviamos la lista final a la tablet
+        res.json(pedidosFormateados);
+
+    } catch (error) {
+        console.error("Error al obtener pedidos pendientes:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- RUTA PARA MARCAR UN PEDIDO COMO COMPLETADO ---
 app.put('/api/pedidos/:id/completar', async (req, res) => {
     try {
