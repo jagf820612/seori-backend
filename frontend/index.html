@@ -416,20 +416,30 @@ function imprimirTicket(carritoAImprimir, totalPagar, metodoPago) {
             const ventana = window.open('', '_blank', 'width=400,height=600');
             
             // Empezamos a construir el diseño del ticket
+            // Empezamos a construir el diseño del ticket
             let html = `
             <!DOCTYPE html>
             <html>
             <head>
                 <title>Ticket Seori</title>
                 <style>
-                    /* Estilos optimizados para impresora térmica de 80mm */
+                    /* Estilos optimizados con márgenes de seguridad */
                     @page { margin: 0; }
-                    body { font-family: 'Courier New', Courier, monospace; width: 80mm; margin: 0; padding: 10px; font-size: 12px; color: #000; }
+                    body { 
+                        font-family: 'Courier New', Courier, monospace; 
+                        width: 72mm; /* Reducido para evitar el corte del rodillo */
+                        margin: 0 auto; 
+                        padding: 2mm 4mm; /* Margen interno */
+                        font-size: 12px; 
+                        color: #000; 
+                    }
                     .center { text-align: center; }
                     .bold { font-weight: bold; }
                     .line { border-bottom: 1px dashed #000; margin: 5px 0; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-                    td { padding: 2px 0; vertical-align: top; }
+                    /* table-layout: fixed evita que los textos largos desarmen la tabla */
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; table-layout: fixed; }
+                    td { padding: 2px 0; vertical-align: top; word-wrap: break-word; }
+                    .col-precio { text-align: right; width: 25%; white-space: nowrap; font-weight: bold; }
                     .right { text-align: right; }
                 </style>
             </head>
@@ -453,7 +463,7 @@ function imprimirTicket(carritoAImprimir, totalPagar, metodoPago) {
                     </tr>
                     <tr>
                         <td style="padding-left: 10px; font-size: 11px;">${item.variante} ${item.notas ? '<br>(' + item.notas + ')' : ''}</td>
-                        <td class="right">$${item.precio * item.cantidad}</td>
+                        <td class="col-precio">$${item.precio * item.cantidad}</td>
                     </tr>
                 `;
             });
