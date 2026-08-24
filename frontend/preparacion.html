@@ -20,33 +20,24 @@
             justify-content: space-between;
             border-bottom: 2px solid #111111;
             padding-bottom: 15px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
 
         .header-container h1 { 
             margin: 0; 
             font-size: 24px; 
             font-weight: 600;
-            color: #111111;
         }
 
-        .logo-pequeno {
-            height: 35px;
-            width: auto;
-            object-fit: contain;
-        }
+        .logo-pequeno { height: 35px; width: auto; object-fit: contain; }
 
-        .btn-salir { 
-            background: #111111; 
-            color: white; 
-            border: none; 
-            padding: 8px 16px; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            font-weight: 600; 
-            font-size: 13px;
-        }
-        .btn-salir:hover { background: #333333; }
+        .btn-salir { background: #111111; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+        
+        /* Controles de Vistas */
+        .controles-vista { display: flex; gap: 10px; margin-bottom: 25px; }
+        .btn-vista { padding: 10px 20px; font-size: 15px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; }
+        .btn-vista.activo { background-color: #111111; color: white; }
+        .btn-vista.inactivo { background-color: #e0e0e0; color: #555555; }
         
         #zona-pedidos {
             display: grid;
@@ -61,67 +52,32 @@
             border-radius: 8px;
             padding: 20px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            position: relative;
         }
+        
+        /* Estilo especial para pedidos completados en el historial */
+        .tarjeta-pedido.completado {
+            background-color: #f1f2f6;
+            border-top: 4px solid #7f8c8d;
+            opacity: 0.8;
+        }
+        .etiqueta-estado { font-size: 12px; font-weight: bold; padding: 3px 8px; border-radius: 4px; position: absolute; top: 20px; right: 20px; }
+        .estado-listo { background: #d4edda; color: #155724; }
+        .estado-pendiente { background: #fff3cd; color: #856404; }
 
         .tarjeta-pedido h2 { 
-            margin-top: 0; 
-            margin-bottom: 15px;
-            color: #111111; 
-            font-size: 20px; 
-            border-bottom: 1px solid #f0f0f0;
-            padding-bottom: 10px;
+            margin-top: 0; margin-bottom: 15px; font-size: 20px; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; 
         }
+        .hora-pedido { font-size: 13px; color: #666666; font-weight: normal; margin-left: 10px; }
 
-        .item-pedido { 
-            font-size: 15px; 
-            margin-bottom: 12px; 
-            border-bottom: 1px dashed #eaeaea; 
-            padding-bottom: 8px; 
-            color: #333333;
-        }
-        
-        .variante-pedido { 
-            display: block; 
-            font-size: 13px; 
-            color: #666666; 
-            margin-top: 2px; 
-        }
-        
-        .notas-pedido { 
-            display: block; 
-            font-size: 13px; 
-            color: #000000; 
-            background: #f1f2f6;
-            padding: 5px 8px;
-            border-radius: 4px;
-            margin-top: 5px; 
-            font-weight: 500;
-        }
+        .item-pedido { font-size: 15px; margin-bottom: 12px; border-bottom: 1px dashed #eaeaea; padding-bottom: 8px; }
+        .variante-pedido { display: block; font-size: 13px; color: #666666; margin-top: 2px; }
+        .notas-pedido { display: block; font-size: 13px; color: #000000; background: #f1f2f6; padding: 5px 8px; border-radius: 4px; margin-top: 5px; font-weight: 500; }
 
-        .btn-listo { 
-            width: 100%; 
-            padding: 12px; 
-            background-color: #111111; 
-            color: #ffffff; 
-            border: none; 
-            font-size: 14px; 
-            font-weight: 600; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            margin-top: 15px; 
-            transition: background 0.2s;
-        }
-        .btn-listo:hover { 
-            background-color: #333333; 
-        }
+        .btn-listo { width: 100%; padding: 12px; background-color: #111111; color: #ffffff; border: none; font-size: 14px; font-weight: 600; border-radius: 6px; cursor: pointer; margin-top: 15px; }
+        .btn-listo:hover { background-color: #333333; }
 
-        .vacio {
-            grid-column: 1 / -1;
-            text-align: center;
-            color: #888888;
-            font-size: 16px;
-            margin-top: 50px;
-        }
+        .vacio { grid-column: 1 / -1; text-align: center; color: #888888; font-size: 16px; margin-top: 50px; }
     </style>
 </head>
 <body>
@@ -134,66 +90,61 @@
         </div>
     </div>
     
-    <div id="zona-pedidos">
-        <div class="vacio" id="mensaje-vacio">No hay pedidos pendientes en este momento.</div>
+    <div class="controles-vista">
+        <button id="btn-pendientes" class="btn-vista activo" onclick="cambiarVista('pendientes')">🔴 Pendientes</button>
+        <button id="btn-historial" class="btn-vista inactivo" onclick="cambiarVista('historial')">🕒 Historial de Hoy</button>
     </div>
+    
+    <div id="zona-pedidos"></div>
 
-    <!-- Librería de Socket.io -->
-    <!-- Librería de Socket.io -->
     <script src="https://seori-backend.onrender.com/socket.io/socket.io.js"></script>
     
-   <script>
-        // --- CANDADO DE SEGURIDAD BLINDADO ---
+    <script>
         const rolUsuario = localStorage.getItem('rol_activo');
-
-        if (!rolUsuario) {
-            window.location.href = 'login.html';
-        } else if (rolUsuario === 'caja') {
-            alert("Acceso denegado. Esta pantalla es exclusiva para el área de producción.");
+        if (!rolUsuario) window.location.href = 'login.html';
+        else if (rolUsuario === 'caja') {
+            alert("Acceso denegado. Exclusivo para cocina.");
             window.location.href = 'index.html';
         }
-
-        window.cerrarSesion = () => { 
-            localStorage.clear(); 
-            window.location.href = 'login.html'; 
-        };
+        window.cerrarSesion = () => { localStorage.clear(); window.location.href = 'login.html'; };
         
         const socket = io('https://seori-backend.onrender.com');
         const contenedor = document.getElementById('zona-pedidos');
+        let vistaActual = 'pendientes'; // Controla qué estamos viendo
 
-        function verificarVacio() {
-            if (contenedor.querySelectorAll('.tarjeta-pedido').length === 0) {
-                if (!document.getElementById('mensaje-vacio')) {
-                    const div = document.createElement('div');
-                    div.id = 'mensaje-vacio';
-                    div.className = 'vacio';
-                    div.innerText = 'No hay pedidos pendientes en este momento.';
-                    contenedor.appendChild(div);
-                }
-            } else {
-                const vacio = document.getElementById('mensaje-vacio');
-                if (vacio) vacio.remove();
+        function verificarVacio(mensaje) {
+            if (contenedor.innerHTML.trim() === '') {
+                contenedor.innerHTML = `<div class="vacio" id="mensaje-vacio">${mensaje}</div>`;
             }
         }
 
-        // --- FUNCIÓN CENTRALIZADA PARA DIBUJAR TARJETAS ---
-        function renderizarTarjetaPedido(datos) {
-            // Evitar duplicados si la tarjeta ya existe en pantalla
+        // Dibuja una tarjeta en pantalla. Se adapta si es vista de pendientes o historial
+        function renderizarTarjetaPedido(datos, esHistorial = false) {
             const idReal = datos.pedido_id || datos.id;
-            if (document.getElementById(`pedido-${idReal}`)) return;
+            
+            // En vista de pendientes, no duplicar tarjetas
+            if (!esHistorial && document.getElementById(`pedido-${idReal}`)) return;
 
             const vacio = document.getElementById('mensaje-vacio');
             if (vacio) vacio.remove();
 
             const tarjeta = document.createElement('div');
             tarjeta.className = 'tarjeta-pedido';
-            tarjeta.id = `pedido-${idReal}`;
+            if (datos.estado === 'Completado') tarjeta.classList.add('completado');
+            if (!esHistorial) tarjeta.id = `pedido-${idReal}`;
             
-            let contenido = `<h2>Pedido #${idReal}</h2>`;
+            let contenido = `<h2>Pedido #${idReal} ${datos.hora ? `<span class="hora-pedido">(${datos.hora})</span>` : ''}</h2>`;
             
-            // Compatibilidad: lee los detalles vengan de Socket o de la Base de Datos
-            const detalles = datos.detalles || datos.detalles_pedido || [];
+            // Etiquetas de estado solo para el historial
+            if (esHistorial) {
+                if (datos.estado === 'Completado') {
+                    contenido += `<span class="etiqueta-estado estado-listo">✔️ Entregado</span>`;
+                } else {
+                    contenido += `<span class="etiqueta-estado estado-pendiente">⏳ En Proceso</span>`;
+                }
+            }
             
+            const detalles = datos.detalles || datos.detalle_pedidos || [];
             detalles.forEach(item => {
                 contenido += `
                 <div class="item-pedido">
@@ -203,50 +154,82 @@
                 </div>`;
             });
             
-            contenido += `<button class="btn-listo" onclick="marcarComoListo(${idReal}, this)">✔️ Marcar como Listo</button>`;
+            // Si está pendiente y no ha sido completado, mostramos el botón
+            if (datos.estado !== 'Completado' && !esHistorial) {
+                contenido += `<button class="btn-listo" onclick="marcarComoListo(${idReal}, this)">✔️ Marcar como Listo</button>`;
+            }
+            
             tarjeta.innerHTML = contenido;
             contenedor.append(tarjeta);
         }
 
-        
-        async function marcarComoListo(pedidoId, botonElemento) {
+        // Carga los pedidos pendientes a la vista
+        async function cargarPedidosPendientes() {
+            contenedor.innerHTML = '<h3 style="grid-column: 1/-1; text-align: center;">Cargando pendientes...</h3>';
             try {
-                botonElemento.innerText = "Actualizando...";
-                botonElemento.disabled = true;
+                const res = await fetch('https://seori-backend.onrender.com/api/pedidos/pendientes');
+                const pedidos = await res.json();
+                contenedor.innerHTML = ''; 
+                if (pedidos.length === 0) verificarVacio('No hay pedidos pendientes en este momento.');
+                else pedidos.forEach(p => renderizarTarjetaPedido(p, false));
+            } catch (error) { console.error(error); }
+        }
 
-                const res = await fetch(`https://seori-backend.onrender.com/api/pedidos/${pedidoId}/completar`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+        // Carga el historial de hoy
+        async function cargarHistorialHoy() {
+            contenedor.innerHTML = '<h3 style="grid-column: 1/-1; text-align: center;">Cargando historial...</h3>';
+            try {
+                const res = await fetch('https://seori-backend.onrender.com/api/pedidos/historial-hoy');
+                const pedidos = await res.json();
+                contenedor.innerHTML = ''; 
+                if (pedidos.length === 0) verificarVacio('No hay pedidos registrados el día de hoy.');
+                else pedidos.forEach(p => renderizarTarjetaPedido(p, true));
+            } catch (error) { console.error(error); }
+        }
 
-                if (!res.ok) throw new Error("No se pudo actualizar el estado en el servidor");
-
-                const tarjeta = botonElemento.closest('.tarjeta-pedido');
-                tarjeta.remove();
-                verificarVacio();
-
-            } catch (error) {
-                console.error("Error al completar pedido:", error);
-                alert("Hubo un error al actualizar el pedido en la base de datos.");
-                botonElemento.innerText = "✔️ Marcar como Listo";
-                botonElemento.disabled = false;
+        // Alterna el diseño de los botones y la data en pantalla
+        window.cambiarVista = function(vista) {
+            vistaActual = vista;
+            const btnP = document.getElementById('btn-pendientes');
+            const btnH = document.getElementById('btn-historial');
+            
+            if (vista === 'pendientes') {
+                btnP.className = 'btn-vista activo'; btnH.className = 'btn-vista inactivo';
+                cargarPedidosPendientes();
+            } else {
+                btnH.className = 'btn-vista activo'; btnP.className = 'btn-vista inactivo';
+                cargarHistorialHoy();
             }
         }
 
-        // --- EVENTO DE DESPERTAR DE LA TABLET ---
-        // Se dispara automáticamente cada vez que la pantalla se enciende o cambias a esta pestaña
+        async function marcarComoListo(pedidoId, botonElemento) {
+            try {
+                botonElemento.innerText = "Actualizando..."; botonElemento.disabled = true;
+                const res = await fetch(`https://seori-backend.onrender.com/api/pedidos/${pedidoId}/completar`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }});
+                if (!res.ok) throw new Error();
+                botonElemento.closest('.tarjeta-pedido').remove();
+                verificarVacio('No hay pedidos pendientes en este momento.');
+            } catch (error) {
+                alert("Hubo un error al actualizar el pedido.");
+                botonElemento.innerText = "✔️ Marcar como Listo"; botonElemento.disabled = false;
+            }
+        }
+
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") {
-                cargarPedidosPendientes();
+                if (vistaActual === 'pendientes') cargarPedidosPendientes();
+                else cargarHistorialHoy();
             }
         });
 
-        // 1. Al abrir la página por primera vez, carga los pendientes
+        // Inicializar
         cargarPedidosPendientes();
 
-        // 2. Mientras la tablet esté encendida, el Socket.io dibuja los nuevos en tiempo real
         socket.on('nuevo-pedido', (datos) => {
-            renderizarTarjetaPedido(datos);
+            // Solo dibujar la alerta visual si estamos en la vista de pendientes
+            if (vistaActual === 'pendientes') {
+                renderizarTarjetaPedido(datos, false);
+            }
         });
     </script>
 </body>
