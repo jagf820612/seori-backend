@@ -229,6 +229,74 @@
             }
         }
 
+// --- NUEVA RUTA: Obtener el historial completo de cocina del día actual ---
+app.get('/api/pedidos/historial-hoy', async (req, res) => {
+    try {
+        // Configuramos la fecha desde la medianoche de hoy
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+
+        const { data: pedidos, error } = await supabase
+            .from('pedidos')
+            .select(`
+                id,
+                estado,
+                fecha_hora,
+                detalle_pedidos (
+                    cantidad,
+                    notas_especiales,
+                    producto_variantes (
+                        nombre_variante,
+                        productos ( nombre_producto, categoria_id )
+                    )
+                )
+            `)
+            .gte('fecha_hora', hoy.toISOString()) // Solo los de hoy
+            .order('fecha_hora', { ascending: false }); // Los más recientes primero
+
+        if (error) throw error;
+
+        const historialFormateado = [];
+
+        for (let pedido of pedidos) {
+            let detallesParaCocina = [];
+
+            for (let detalle of pedido.detalle_pedidos) {
+                const categoria = detalle.producto_variantes?.productos?.categoria_id;
+                
+                // Excluimos la mercancía (Categoría 6)
+                if (categoria !== 6) {
+                    detallesParaCocina.push({
+                        cantidad: detalle.cantidad,
+                        nombre: detalle.producto_variantes?.productos?.nombre_producto,
+                        variante: detalle.producto_variantes?.nombre_variante,
+                        notas: detalle.notas_especiales
+                    });
+                }
+            }
+
+            // Solo agregamos el pedido si tuvo productos de cocina
+            if (detallesParaCocina.length > 0) {
+                // Formateamos la hora para que sea fácil de leer en cocina (ej: 03:45 PM)
+                const horaLocal = new Date(pedido.fecha_hora).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+                
+                historialFormateado.push({
+                    pedido_id: pedido.id,
+                    estado: pedido.estado,
+                    hora: horaLocal,
+                    detalles: detallesParaCocina
+                });
+            }
+        }
+
+        res.json(historialFormateado);
+
+    } catch (error) {
+        console.error("Error al obtener historial de hoy:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+       
         async function marcarComoListo(pedidoId, botonElemento) {
             try {
                 botonElemento.innerText = "Actualizando...";
