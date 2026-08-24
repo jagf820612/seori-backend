@@ -356,6 +356,64 @@ app.get('/api/pedidos/historial-hoy', async (req, res) => {
     }
 });
 
+// --- NUEVA RUTA: Historial completo para la Caja (Incluye precios y K-Merch) ---
+app.get('/api/pedidos/historial-caja-hoy', async (req, res) => {
+    try {
+        // Ajuste estricto para la Zona Horaria de Colombia (UTC-5)
+        const ahora = new Date();
+        const horaColombia = new Date(ahora.getTime() - (5 * 60 * 60 * 1000));
+        horaColombia.setUTCHours(0, 0, 0, 0);
+        const inicioDelDiaColombia = new Date(horaColombia.getTime() + (5 * 60 * 60 * 1000)).toISOString();
+
+        const { data: pedidos, error } = await supabase
+            .from('pedidos')
+            .select(`
+                id, estado, fecha_hora, total, metodo_pago,
+                detalle_pedidos (
+                    cantidad, subtotal, notas_especiales,
+                    producto_variantes (
+                        nombre_variante,
+                        productos ( nombre_producto )
+                    )
+                )
+            `)
+            .gte('fecha_hora', inicioDelDiaColombia)
+            .order('fecha_hora', { ascending: false });
+
+        if (error) throw error;
+
+        // Formateamos los datos para enviarlos limpios al frontend
+        const historialCaja = pedidos.map(pedido => {
+            const horaLocal = new Date(pedido.fecha_hora).toLocaleTimeString('es-CO', { 
+                timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit' 
+            });
+            
+            return {
+                pedido_id: pedido.id,
+                estado: pedido.estado,
+                hora: horaLocal,
+                total: pedido.total,
+                metodo_pago: pedido.metodo_pago,
+                detalles: pedido.detalle_pedidos.map(d => ({
+                    cantidad: d.cantidad,
+                    subtotal: d.subtotal,
+                    nombre: d.producto_variantes?.productos?.nombre_producto,
+                    variante: d.producto_variantes?.nombre_variante,
+                    notas: d.notas_especiales
+                }))
+            };
+        });
+
+        res.json(historialCaja);
+
+    } catch (error) {
+        console.error("Error al obtener historial de caja:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+
 // --- RUTA PARA MARCAR UN PEDIDO COMO COMPLETADO ---
 app.put('/api/pedidos/:id/completar', async (req, res) => {
     try {
