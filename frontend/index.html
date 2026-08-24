@@ -70,6 +70,7 @@
             <span id="nombre-cajero" style="margin-right: 15px; font-weight: 500; font-size: 14px;"></span>
             <button class="btn-cerrar-turno" onclick="iniciarCierreTurno()">Cerrar Turno</button>
             <a href="admin.html" id="btn-admin" class="btn-admin">⚙️ Panel Admin</a>
+            <button onclick="abrirModalHistorial()" style="background-color: #3498db; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: 10px;">🕒 Historial de Ventas</button>
             <button class="btn-salir" onclick="cerrarSesion()">Cerrar Sesión</button>
         </div>
     </div>
@@ -492,6 +493,8 @@ function imprimirTicket(carritoAImprimir, totalPagar, metodoPago, numeroPedido) 
                         window.close();
                     }
                 <\/script>
+
+                
             </body>
             </html>
             `;
@@ -529,6 +532,84 @@ function imprimirTicket(carritoAImprimir, totalPagar, metodoPago, numeroPedido) 
             }
         }
         iniciarSistema();
+    
+    // --- FUNCIONES PARA EL HISTORIAL DE CAJA ---
+function abrirModalHistorial() {
+    document.getElementById('modal-historial').style.display = 'flex';
+    cargarHistorialCaja();
+}
+
+function cerrarModalHistorial() {
+    document.getElementById('modal-historial').style.display = 'none';
+}
+
+async function cargarHistorialCaja() {
+    const contenedor = document.getElementById('contenido-historial');
+    contenedor.innerHTML = '<p style="text-align: center;">Cargando ventas...</p>';
+    
+    try {
+        const res = await fetch('https://seori-backend.onrender.com/api/pedidos/historial-caja-hoy');
+        const pedidos = await res.json();
+        
+        if (pedidos.length === 0) {
+            contenedor.innerHTML = '<p style="text-align: center; color: #7f8c8d;">No hay ventas registradas hoy.</p>';
+            return;
+        }
+
+        let html = '';
+        pedidos.forEach(p => {
+            // Color de la etiqueta según el estado
+            const colorEstado = p.estado === 'Completado' ? '#27ae60' : '#f39c12';
+            
+            html += `
+            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #f9f9f9;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+                    <strong style="font-size: 16px;">Pedido #${p.pedido_id} <span style="color: #7f8c8d; font-weight: normal; font-size: 14px;">(${p.hora})</span></strong>
+                    <span style="background: ${colorEstado}; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">${p.estado}</span>
+                </div>
+                <div style="margin-bottom: 10px;">
+            `;
+            
+            p.detalles.forEach(d => {
+                html += `
+                    <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px;">
+                        <span><strong>${d.cantidad}x</strong> ${d.nombre} ${d.variante ? `<br><small style="color: #7f8c8d;">${d.variante}</small>` : ''}</span>
+                        <strong>$${d.subtotal}</strong>
+                    </div>
+                `;
+            });
+
+            html += `
+                </div>
+                <div style="display: flex; justify-content: space-between; border-top: 1px dashed #ccc; padding-top: 10px; font-size: 15px;">
+                    <span style="color: #7f8c8d;">Pago: ${p.metodo_pago}</span>
+                    <strong style="font-size: 16px;">Total: $${p.total}</strong>
+                </div>
+            </div>`;
+        });
+        
+        contenedor.innerHTML = html;
+        
+    } catch (error) {
+        console.error(error);
+        contenedor.innerHTML = '<p style="text-align: center; color: red;">Error al cargar el historial.</p>';
+    }
+}
+    
+    
     </script>
+
+<!-- MODAL DE HISTORIAL DE CAJA -->
+<div id="modal-historial" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center;">
+    <div style="background: white; width: 90%; max-width: 600px; max-height: 85vh; border-radius: 10px; padding: 20px; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
+            <h2 style="margin: 0; font-size: 20px;">🕒 Historial de Ventas (Hoy)</h2>
+            <button onclick="cerrarModalHistorial()" style="background: #e74c3c; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">Cerrar</button>
+        </div>
+        <div id="contenido-historial" style="overflow-y: auto; flex-grow: 1;">
+            <!-- Aquí se inyectarán los pedidos -->
+        </div>
+    </div>
+</div>
 </body>
 </html>
