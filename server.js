@@ -174,23 +174,26 @@ app.post('/api/pedidos', async (req, res) => {
     }
 });
 
-// --- NUEVA RUTA MEJORADA: Reporte de Cuadre de Caja ---
+// --- NUEVA RUTA MEJORADA: Reporte de Cuadre de Caja (Con Zona Horaria Colombia) ---
 app.get('/api/cuadre', async (req, res) => {
     try {
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0); // Desde la medianoche de hoy
+        // Ajuste estricto para la Zona Horaria de Colombia (UTC-5)
+        const ahora = new Date();
+        const horaColombia = new Date(ahora.getTime() - (5 * 60 * 60 * 1000));
+        horaColombia.setUTCHours(0, 0, 0, 0); // Calculamos la medianoche exacta en Colombia
+        const inicioDelDiaColombia = new Date(horaColombia.getTime() + (5 * 60 * 60 * 1000)).toISOString();
 
         const { data: pedidos, error } = await supabase
             .from('pedidos')
             .select('total, metodo_pago')
-            .gte('fecha_hora', hoy.toISOString()); 
+            .gte('fecha_hora', inicioDelDiaColombia); 
 
         if (error) throw error;
 
         let reporte = {
             Efectivo: 0,
             Nequi: 0,
-            QR: 0, // <-- Cambiamos Bancolombia por QR
+            QR: 0, 
             Total_General: 0,
             Cantidad_Pedidos: pedidos.length
         };
@@ -203,7 +206,7 @@ app.get('/api/cuadre', async (req, res) => {
                 reporte.Efectivo += monto;
             } else if (metodo === 'nequi') {
                 reporte.Nequi += monto;
-            } else if (metodo === 'qr' || metodo === 'qr bold') { // Detecta el pago de Bold
+            } else if (metodo === 'qr' || metodo === 'qr bold') {
                 reporte.QR += monto;
             }
             reporte.Total_General += monto;
@@ -282,12 +285,14 @@ app.get('/api/pedidos/pendientes', async (req, res) => {
     }
 });
 
-// --- NUEVA RUTA: Obtener el historial completo de cocina del día actual ---
+// --- NUEVA RUTA: Obtener el historial completo de cocina del día actual (Con Zona Horaria Colombia) ---
 app.get('/api/pedidos/historial-hoy', async (req, res) => {
     try {
-        // Configuramos la fecha desde la medianoche de hoy
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
+        // Ajuste estricto para la Zona Horaria de Colombia (UTC-5)
+        const ahora = new Date();
+        const horaColombia = new Date(ahora.getTime() - (5 * 60 * 60 * 1000));
+        horaColombia.setUTCHours(0, 0, 0, 0);
+        const inicioDelDiaColombia = new Date(horaColombia.getTime() + (5 * 60 * 60 * 1000)).toISOString();
 
         const { data: pedidos, error } = await supabase
             .from('pedidos')
@@ -304,8 +309,8 @@ app.get('/api/pedidos/historial-hoy', async (req, res) => {
                     )
                 )
             `)
-            .gte('fecha_hora', hoy.toISOString()) // Solo los de hoy
-            .order('fecha_hora', { ascending: false }); // Los más recientes primero
+            .gte('fecha_hora', inicioDelDiaColombia)
+            .order('fecha_hora', { ascending: false });
 
         if (error) throw error;
 
@@ -316,8 +321,6 @@ app.get('/api/pedidos/historial-hoy', async (req, res) => {
 
             for (let detalle of pedido.detalle_pedidos) {
                 const categoria = detalle.producto_variantes?.productos?.categoria_id;
-                
-                // Excluimos la mercancía (Categoría 6)
                 if (categoria !== 6) {
                     detallesParaCocina.push({
                         cantidad: detalle.cantidad,
@@ -328,10 +331,13 @@ app.get('/api/pedidos/historial-hoy', async (req, res) => {
                 }
             }
 
-            // Solo agregamos el pedido si tuvo productos de cocina
             if (detallesParaCocina.length > 0) {
-                // Formateamos la hora para que sea fácil de leer en cocina (ej: 03:45 PM)
-                const horaLocal = new Date(pedido.fecha_hora).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+                // Convertimos la hora UTC a la hora local de Colombia para que la tablet la muestre bien
+                const horaLocal = new Date(pedido.fecha_hora).toLocaleTimeString('es-CO', { 
+                    timeZone: 'America/Bogota', 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
                 
                 historialFormateado.push({
                     pedido_id: pedido.id,
@@ -349,7 +355,6 @@ app.get('/api/pedidos/historial-hoy', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
 
 // --- RUTA PARA MARCAR UN PEDIDO COMO COMPLETADO ---
 app.put('/api/pedidos/:id/completar', async (req, res) => {
