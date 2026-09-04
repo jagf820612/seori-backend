@@ -74,7 +74,7 @@
         .variante-pedido { display: block; font-size: 13px; color: #666666; margin-top: 2px; }
         .notas-pedido { display: block; font-size: 13px; color: #000000; background: #f1f2f6; padding: 5px 8px; border-radius: 4px; margin-top: 5px; font-weight: 500; }
 
-        .btn-listo { width: 100%; padding: 12px; background-color: #111111; color: #ffffff; border: none; font-size: 14px; font-weight: 600; border-radius: 6px; cursor: pointer; margin-top: 15px; }
+        .btn-listo { width: 100%; padding: 12px; background-color: #111111; color: #ffffff; border: none; font-size: 14px; font-weight: 600; border-radius: 6px; cursor: pointer; margin-top: 15px; transition: background 0.2s; }
         .btn-listo:hover { background-color: #333333; }
 
         .vacio { grid-column: 1 / -1; text-align: center; color: #888888; font-size: 16px; margin-top: 50px; }
@@ -110,7 +110,7 @@
         
         const socket = io('https://seori-backend.onrender.com');
         const contenedor = document.getElementById('zona-pedidos');
-        let vistaActual = 'pendientes'; // Controla qué estamos viendo
+        let vistaActual = 'pendientes'; 
 
         function verificarVacio(mensaje) {
             if (contenedor.innerHTML.trim() === '') {
@@ -118,11 +118,10 @@
             }
         }
 
-        // Dibuja una tarjeta en pantalla. Se adapta si es vista de pendientes o historial
+        // Función central para dibujar tarjetas adaptada con las observaciones de caja
         function renderizarTarjetaPedido(datos, esHistorial = false) {
             const idReal = datos.pedido_id || datos.id;
             
-            // En vista de pendientes, no duplicar tarjetas
             if (!esHistorial && document.getElementById(`pedido-${idReal}`)) return;
 
             const vacio = document.getElementById('mensaje-vacio');
@@ -135,13 +134,17 @@
             
             let contenido = `<h2>Pedido #${idReal} ${datos.hora ? `<span class="hora-pedido">(${datos.hora})</span>` : ''}</h2>`;
             
-            // Etiquetas de estado solo para el historial
             if (esHistorial) {
                 if (datos.estado === 'Completado') {
                     contenido += `<span class="etiqueta-estado estado-listo">✔️ Entregado</span>`;
                 } else {
                     contenido += `<span class="etiqueta-estado estado-pendiente">⏳ En Proceso</span>`;
                 }
+            }
+
+            // RECUADRO AMARILLO PARA OBSERVACIONES GENERALES
+            if (datos.observaciones && datos.observaciones.trim() !== '') {
+                contenido += `<div style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 4px; margin-bottom: 15px; font-size: 15px; border-left: 5px solid #ffc107;"><strong>🗣️ Nota de Caja:</strong> ${datos.observaciones}</div>`;
             }
             
             const detalles = datos.detalles || datos.detalle_pedidos || [];
@@ -154,7 +157,6 @@
                 </div>`;
             });
             
-            // Si está pendiente y no ha sido completado, mostramos el botón
             if (datos.estado !== 'Completado' && !esHistorial) {
                 contenido += `<button class="btn-listo" onclick="marcarComoListo(${idReal}, this)">✔️ Marcar como Listo</button>`;
             }
@@ -163,7 +165,6 @@
             contenedor.append(tarjeta);
         }
 
-        // Carga los pedidos pendientes a la vista
         async function cargarPedidosPendientes() {
             contenedor.innerHTML = '<h3 style="grid-column: 1/-1; text-align: center;">Cargando pendientes...</h3>';
             try {
@@ -175,7 +176,6 @@
             } catch (error) { console.error(error); }
         }
 
-        // Carga el historial de hoy
         async function cargarHistorialHoy() {
             contenedor.innerHTML = '<h3 style="grid-column: 1/-1; text-align: center;">Cargando historial...</h3>';
             try {
@@ -187,7 +187,6 @@
             } catch (error) { console.error(error); }
         }
 
-        // Alterna el diseño de los botones y la data en pantalla
         window.cambiarVista = function(vista) {
             vistaActual = vista;
             const btnP = document.getElementById('btn-pendientes');
@@ -215,6 +214,7 @@
             }
         }
 
+        // Sensor de reactivación para la tablet
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") {
                 if (vistaActual === 'pendientes') cargarPedidosPendientes();
@@ -222,11 +222,9 @@
             }
         });
 
-        // Inicializar
         cargarPedidosPendientes();
 
         socket.on('nuevo-pedido', (datos) => {
-            // Solo dibujar la alerta visual si estamos en la vista de pendientes
             if (vistaActual === 'pendientes') {
                 renderizarTarjetaPedido(datos, false);
             }
