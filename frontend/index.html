@@ -125,11 +125,11 @@
                 </div>
             </div>
             <div class="modal-section" id="sec-toppings">
-                <h4>Toppings (2 Gratis, luego según DB)</h4>
+                <h4 id="titulo-toppings">Toppings</h4>
                 <div class="check-grid" id="modal-lista-toppings"></div>
             </div>
             <div class="modal-section" id="sec-salsas">
-                <h4>Salsas (1 Gratis, extra $1000)</h4>
+                <h4 id="titulo-salsas">Salsas</h4>
                 <div class="check-grid">
                     <label class="check-item"><input type="checkbox" class="chk-salsa" value="Chocolate" onchange="calcularExtras()"> Chocolate</label>
                     <label class="check-item"><input type="checkbox" class="chk-salsa" value="Fresa" onchange="calcularExtras()"> Fresa</label>
@@ -141,6 +141,23 @@
                 <button class="btn-modal-cancel" onclick="cerrarModal()">Cancelar</button>
                 <div class="modal-total">Total: $<span id="modal-total-calc"></span></div>
                 <button class="btn-modal-add" onclick="confirmarPersonalizacion()">Agregar al Ticket</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NUEVO MODAL: VARIANTES DE MERCH -->
+    <div class="modal-overlay" id="modal-variantes-merch">
+        <div class="modal-box" style="width: 400px;">
+            <h3>Seleccionar Opción: <br><span id="modal-merch-nombre" style="font-size: 15px; font-weight: normal;"></span></h3>
+            <div class="modal-section">
+                <h4>Variantes disponibles</h4>
+                <div id="modal-merch-lista-variantes" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Aquí se inyectan las variantes -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-cancel" onclick="cerrarModalMerch()">Cancelar</button>
+                <button class="btn-modal-add" onclick="confirmarMerch()">Agregar al Ticket</button>
             </div>
         </div>
     </div>
@@ -197,7 +214,6 @@
     <script>
         const rolActivo = localStorage.getItem('rol_activo');
         
-        // CANDADO DE SEGURIDAD BLINDADO
         if (!rolActivo) {
             window.location.href = 'login.html';
         } else if (rolActivo === 'cocina') {
@@ -213,6 +229,7 @@
         let todosLosProductos = [];
         let carrito = [];
         let itemTemporal = null; 
+        let merchTemporal = null; // Para guardar el merch seleccionado
         let turnoActualId = null;
 
         async function iniciarSistema() {
@@ -322,25 +339,85 @@
         function renderizarProductos(categoriaId) {
             const grid = document.getElementById('grid-productos');
             grid.innerHTML = ''; 
-            const filtrados = todosLosProductos.filter(p => p.categoria_id === categoriaId && p.disponible);
+            
+            let filtrados = todosLosProductos.filter(p => p.categoria_id === categoriaId && p.disponible);
+            
+            // ORDEN ALFABÉTICO (Aplica para Toppings Categoría 4, y general para limpieza)
+            filtrados.sort((a, b) => a.nombre_producto.localeCompare(b.nombre_producto));
+
             if (filtrados.length === 0) return grid.innerHTML = '<h4>No hay productos.</h4>';
             
-            filtrados.forEach(prod => {
-                if (!prod.producto_variantes) return;
-                prod.producto_variantes.forEach(variante => {
+            // SI ES K-MERCH (CATEGORÍA 6), MOSTRAMOS SOLO EL PRODUCTO Y ABRE MODAL
+            if (categoriaId === 6) {
+                filtrados.forEach(prod => {
                     const btn = document.createElement('div');
                     btn.className = 'card-producto';
-                    if (categoriaId === 1 || categoriaId === 2) {
-                        btn.onclick = () => abrirModalPersonalizacion(categoriaId, prod.id, variante.id, prod.nombre_producto, variante.nombre_variante, variante.precio);
-                    } else {
-                        btn.onclick = () => agregarAlCarrito(prod.id, variante.id, prod.nombre_producto, variante.nombre_variante, variante.precio, "");
-                    }
-                    btn.innerHTML = `<div><h4>${prod.nombre_producto}</h4><p>${variante.nombre_variante}</p></div><div class="precio">$${variante.precio}</div>`;
+                    btn.onclick = () => abrirModalVariantesMerch(prod);
+                    let precioMostrar = prod.producto_variantes && prod.producto_variantes.length > 0 ? `$${prod.producto_variantes[0].precio}` : '';
+                    
+                    btn.innerHTML = `<div><h4>${prod.nombre_producto}</h4><p style="color: #3498db; font-weight:bold;">Ver opciones</p></div><div class="precio">${precioMostrar}</div>`;
                     grid.appendChild(btn);
                 });
-            });
+            } else {
+                // FLUJO NORMAL PARA EL RESTO DE CATEGORÍAS
+                filtrados.forEach(prod => {
+                    if (!prod.producto_variantes) return;
+                    prod.producto_variantes.forEach(variante => {
+                        const btn = document.createElement('div');
+                        btn.className = 'card-producto';
+                        if (categoriaId === 1 || categoriaId === 2) {
+                            btn.onclick = () => abrirModalPersonalizacion(categoriaId, prod.id, variante.id, prod.nombre_producto, variante.nombre_variante, variante.precio);
+                        } else {
+                            btn.onclick = () => agregarAlCarrito(prod.id, variante.id, prod.nombre_producto, variante.nombre_variante, variante.precio, "");
+                        }
+                        btn.innerHTML = `<div><h4>${prod.nombre_producto}</h4><p>${variante.nombre_variante}</p></div><div class="precio">$${variante.precio}</div>`;
+                        grid.appendChild(btn);
+                    });
+                });
+            }
         }
 
+        // --- FUNCIONES DEL NUEVO MODAL K-MERCH (CATEGORÍA 6) ---
+        window.abrirModalVariantesMerch = function(prod) {
+            merchTemporal = prod;
+            document.getElementById('modal-merch-nombre').innerText = prod.nombre_producto;
+            
+            const contenedor = document.getElementById('modal-merch-lista-variantes');
+            contenedor.innerHTML = '';
+            
+            prod.producto_variantes.forEach((v, index) => {
+                const checked = index === 0 ? 'checked' : '';
+                contenedor.innerHTML += `
+                    <label style="display: flex; justify-content: space-between; padding: 12px; background: #f8f9fa; border: 1px solid #dcdde1; border-radius: 6px; cursor: pointer;">
+                        <div>
+                            <input type="radio" name="merchVariante" value="${v.id}" data-nombre="${v.nombre_variante}" data-precio="${v.precio}" ${checked} style="transform: scale(1.2); margin-right: 10px;">
+                            <span style="font-weight: 500;">${v.nombre_variante}</span>
+                        </div>
+                        <span style="color: #111; font-weight: bold;">$${v.precio}</span>
+                    </label>
+                `;
+            });
+            document.getElementById('modal-variantes-merch').style.display = 'flex';
+        }
+
+        window.cerrarModalMerch = function() {
+            document.getElementById('modal-variantes-merch').style.display = 'none';
+            merchTemporal = null;
+        }
+
+        window.confirmarMerch = function() {
+            const seleccion = document.querySelector('input[name="merchVariante"]:checked');
+            if(!seleccion) return alert("Selecciona una variante");
+            
+            const idVariante = parseInt(seleccion.value);
+            const nombreVar = seleccion.getAttribute('data-nombre');
+            const precio = parseFloat(seleccion.getAttribute('data-precio'));
+
+            agregarAlCarrito(merchTemporal.id, idVariante, merchTemporal.nombre_producto, nombreVar, precio, "");
+            cerrarModalMerch();
+        }
+
+        // --- FLUJO DE PERSONALIZACIÓN PARA HELADOS ---
         function abrirModalPersonalizacion(categoriaId, idProducto, idVariante, nombreProd, nombreVar, precioBase) {
             itemTemporal = { idProducto, idVariante, nombreProd, nombreVar, precioBase, categoriaId };
             document.getElementById('modal-nombre').innerText = `${nombreProd} (${nombreVar})`;
@@ -348,13 +425,26 @@
             document.querySelector('input[name="saborHelado"][value="Vainilla"]').checked = true;
             document.querySelectorAll('.chk-salsa').forEach(chk => chk.checked = false);
 
+            // ACTUALIZAR TÍTULOS SEGÚN LA REGLA DE NEGOCIO (Bingsu vs K-Soft)
+            if (categoriaId === 1) { // Bingsu
+                document.getElementById('titulo-toppings').innerText = "Toppings (Costo extra según DB)";
+                document.getElementById('titulo-salsas').innerText = "Salsas ($1000 c/u)";
+            } else if (categoriaId === 2) { // K-Soft
+                document.getElementById('titulo-toppings').innerText = "Toppings (2 Gratis, luego según DB)";
+                document.getElementById('titulo-salsas').innerText = "Salsas (1 Gratis, extra $1000)";
+            }
+
             document.getElementById('sec-toppings').style.display = 'block'; 
             document.getElementById('sec-salsas').style.display = 'block';
             
             const cont = document.getElementById('modal-lista-toppings'); 
             cont.innerHTML = '';
             
-            todosLosProductos.filter(p => p.categoria_id === 4 && p.disponible).forEach(top => {
+            // CARGAMOS Y ORDENAMOS LOS TOPPINGS ALFABÉTICAMENTE
+            let toppings = todosLosProductos.filter(p => p.categoria_id === 4 && p.disponible);
+            toppings.sort((a, b) => a.nombre_producto.localeCompare(b.nombre_producto));
+
+            toppings.forEach(top => {
                 if(top.producto_variantes && top.producto_variantes.length > 0) {
                     cont.innerHTML += `
                         <label class="check-item">
@@ -373,21 +463,28 @@
 
         function calcularExtras() {
             let extra = 0;
-            if (itemTemporal.categoriaId === 2) {
+            
+            // CALCULO DE TOPPINGS
+            if (itemTemporal.categoriaId === 2) { // K-Soft: 2 Gratis
                 const tops = document.querySelectorAll('.chk-topping:checked');
                 tops.forEach((chk, i) => { 
                     if (i >= 2) extra += parseFloat(chk.getAttribute('data-precio') || 0); 
                 });
-            } else if (itemTemporal.categoriaId === 1) {
+            } else if (itemTemporal.categoriaId === 1) { // Bingsu: Todos se cobran
                 const tops = document.querySelectorAll('.chk-topping:checked');
                 tops.forEach(chk => { 
                     extra += parseFloat(chk.getAttribute('data-precio') || 0); 
                 });
             }
 
+            // CALCULO DE SALSAS
             const salsas = document.querySelectorAll('.chk-salsa:checked');
-            if (salsas.length > 1) {
-                extra += (salsas.length - 1) * 1000;
+            if (itemTemporal.categoriaId === 1) { // Bingsu: Todas se cobran a 1000
+                extra += salsas.length * 1000;
+            } else if (itemTemporal.categoriaId === 2) { // K-Soft: 1 Gratis
+                if (salsas.length > 1) {
+                    extra += (salsas.length - 1) * 1000;
+                }
             }
 
             const totalFinal = itemTemporal.precioBase + extra;
@@ -491,10 +588,15 @@
             }
         }
 
-        // --- FUNCIÓN DE IMPRESIÓN DEL TICKET (CON LOGO Y # PEDIDO) ---
+        // --- FUNCIÓN DE IMPRESIÓN DEL TICKET ---
         function imprimirTicket(carritoAImprimir, totalPagar, metodoPago, numeroPedido) {
             const ventana = window.open('', '_blank', 'width=400,height=600');
             
+            if (!ventana) {
+                alert("⚠️ Chrome bloqueó el ticket. Por favor, mira arriba a la derecha en la barra de direcciones y permite las ventanas emergentes.");
+                return; 
+            }
+
             let html = `
             <!DOCTYPE html>
             <html>
@@ -515,14 +617,12 @@
                     .line { border-bottom: 1px dashed #000; margin: 5px 0; }
                     table { width: 100%; border-collapse: collapse; margin-bottom: 10px; table-layout: fixed; }
                     td { padding: 2px 0; vertical-align: top; word-wrap: break-word; }
-                    
                     .logo-ticket { 
                         width: 140px; 
                         display: block; 
                         margin: 0 auto 5px auto; 
                         filter: grayscale(100%) contrast(200%);
                     }
-                    
                     .desc-producto { padding-left: 5px; font-size: 13px; font-weight: bold; }
                     .col-precio { text-align: right; width: 30%; white-space: nowrap; font-weight: bold; padding-right: 5px; }
                     .right { text-align: right; }
@@ -574,7 +674,6 @@
             ventana.document.close();
         }
 
-        // --- FUNCIÓN DE PROCESAR VENTA (MODIFICADA PARA OBSERVACIONES Y # PEDIDO) ---
         window.procesarVenta = async () => {
             if (!carrito.length) return alert("Ticket vacío.");
             const btn = document.getElementById('btn-cobrar'); btn.innerText = "Procesando..."; btn.disabled = true;
@@ -593,7 +692,6 @@
                 });
                 
                 if(!res.ok) throw new Error();
-                
                 const data = await res.json();
                 const numeroPedido = data.pedido_id;
 
@@ -603,8 +701,8 @@
                 
                 carrito = []; 
                 actualizarTicket();
-                document.getElementById('observaciones_pedido').value = ''; // Limpiamos el cuadro de texto
-                
+                document.getElementById('observaciones_pedido').value = '';
+
             } catch (e) { 
                 alert("Error al cobrar."); 
             } finally { 
