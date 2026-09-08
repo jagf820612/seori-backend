@@ -22,64 +22,36 @@
             max-width: 900px;
             margin: 0 auto 30px auto;
         }
-        .header-container h1 { 
-            margin: 0; 
-            font-size: 24px; 
-            color: #111111; 
-        }
-        .logo-pequeno {
-            height: 35px;
-            width: auto;
-            object-fit: contain;
-        }
-        .subtitulo {
-            text-align: center;
-            color: #555555;
-            margin-bottom: 40px;
-        }
+        .header-container h1 { margin: 0; font-size: 24px; color: #111111; }
+        .logo-pequeno { height: 35px; width: auto; object-fit: contain; }
+        .subtitulo { text-align: center; color: #555555; margin-bottom: 40px; }
+        
         .menu-grid { 
-            display: flex; 
-            justify-content: center; 
-            gap: 20px; 
-            flex-wrap: wrap; 
-            max-width: 900px;
-            margin: 0 auto; 
+            display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; 
+            max-width: 900px; margin: 0 auto; 
         }
         .card { 
-            background: white; 
-            padding: 30px; 
-            border-radius: 8px; 
-            width: 260px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03); 
-            text-decoration: none; 
-            color: #111111; 
-            transition: transform 0.2s, box-shadow 0.2s; 
-            border: 1px solid #e0e0e0;
-            border-top: 4px solid #111111; 
-            text-align: left;
+            background: white; padding: 30px; border-radius: 8px; width: 260px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03); text-decoration: none; color: #111111; 
+            transition: transform 0.2s, box-shadow 0.2s; border: 1px solid #e0e0e0;
+            border-top: 4px solid #111111; text-align: left; position: relative;
         }
-        .card:hover { 
-            transform: translateY(-3px); 
-            box-shadow: 0 6px 15px rgba(0,0,0,0.06); 
-        }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.06); }
         .card h2 { margin: 0 0 10px 0; font-size: 18px; color: #111111; }
         .card p { margin: 0; color: #666666; font-size: 13px; }
         
         .btn-salir { 
-            display: block; 
-            width: 200px; 
-            margin: 50px auto 0; 
-            padding: 12px; 
-            background: #111111; 
-            color: white; 
-            border: none; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            font-weight: 600; 
-            font-size: 14px;
-            transition: background 0.2s;
+            display: block; width: 200px; margin: 50px auto 0; padding: 12px; 
+            background: #111111; color: white; border: none; border-radius: 6px; 
+            cursor: pointer; font-weight: 600; font-size: 14px; transition: background 0.2s;
         }
         .btn-salir:hover { background: #333333; }
+        
+        /* ESTILOS DEL MODAL DE ESCÁNER */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; }
+        .modal-box { background: white; width: 400px; padding: 25px; border-radius: 8px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .btn-guardar-ingreso { padding: 10px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1; }
+        .btn-cancelar { padding: 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; flex: 1; }
     </style>
 </head>
 <body>
@@ -89,7 +61,8 @@
         <img src="img/logo-seori.png" alt="Seori Logo" class="logo-pequeno">
     </div>
     
-    <p class="subtitulo">Bienvenido, <span id="nombre-admin" style="font-weight: 600;"></span></p>
+    <p class="subtitulo">Bienvenido, <span id="nombre-admin" style="font-weight: 600;"></span><br>
+    <small>💡 Tip: En esta pantalla puedes usar la pistola de códigos para ingresar mercancía rápido.</small></p>
 
     <div class="menu-grid">
         <a href="cierre.html" class="card">
@@ -106,22 +79,132 @@
             <h2>💸 Gastos</h2>
             <p>Registro de salidas de dinero e insumos operativos.</p>
         </a>
+
+        <!-- NUEVA TARJETA PARA EL KARDEX -->
+        <a href="kardex.html" class="card" style="border-top-color: #3498db;">
+            <h2>📋 Kardex y Escáner</h2>
+            <p>Libro de entradas y salidas. Conecta tu pistola aquí.</p>
+        </a>
     </div>
 
     <button class="btn-salir" onclick="cerrarSesion()">Cerrar Sesión</button>
 
+
+    <!-- MODAL DE INGRESO RÁPIDO POR ESCÁNER -->
+    <div id="modal-ingreso-escaner" class="modal-overlay">
+        <div class="modal-box">
+            <h2 style="margin-top: 0; color: #27ae60;">📦 Escaneo Exitoso</h2>
+            <h3 id="escaner-nombre-producto" style="color: #333; margin-bottom: 5px;">Cargando...</h3>
+            <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Stock actual en bodega: <strong id="escaner-stock-actual">0</strong></p>
+            
+            <div style="text-align: left; margin-bottom: 20px;">
+                <label style="font-weight: bold; font-size: 14px;">¿Cuántas unidades acaban de llegar?</label>
+                <input type="number" id="escaner-cantidad-ingreso" min="1" value="1" style="width: 100%; padding: 10px; font-size: 18px; text-align: center; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; outline: none;">
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-cancelar" onclick="cerrarModalEscaner()">Cancelar</button>
+                <button class="btn-guardar-ingreso" onclick="confirmarIngresoEscaner()">Guardar Ingreso</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // --- VALIDACIÓN DE ACCESO ---
         const rolUsuario = localStorage.getItem('rol_activo');
         if (rolUsuario !== 'admin') {
             window.location.href = 'login.html';
         }
-        
         document.getElementById('nombre-admin').innerText = localStorage.getItem('usuario_activo') || 'Administrador';
 
         window.cerrarSesion = function() {
             localStorage.clear();
             window.location.href = 'login.html';
         };
+
+        // ====================================================
+        // --- LECTOR DE CÓDIGOS PARA INGRESOS DE INVENTARIO ---
+        // ====================================================
+        let codigoAdmin = '';
+        let timerLectorAdmin = null;
+        let productoEscaneadoTemp = null;
+
+        document.addEventListener('keypress', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            if (e.key === 'Enter') {
+                if (codigoAdmin.length > 0) { 
+                    buscarProductoPorCodigo(codigoAdmin);
+                }
+                codigoAdmin = '';
+                clearTimeout(timerLectorAdmin);
+            } else {
+                codigoAdmin += e.key;
+                clearTimeout(timerLectorAdmin);
+                timerLectorAdmin = setTimeout(() => { codigoAdmin = ''; }, 500); 
+            }
+        });
+
+        async function buscarProductoPorCodigo(codigo) {
+            try {
+                const res = await fetch(`https://seori-backend.onrender.com/api/productos/codigo/${codigo}`);
+                
+                if (!res.ok) {
+                    alert(`⚠️ No se encontró ningún producto registrado con el código: ${codigo}`);
+                    return; 
+                }
+
+                const data = await res.json();
+                productoEscaneadoTemp = data; 
+                
+                document.getElementById('escaner-nombre-producto').innerText = `${data.productos.nombre_producto} (${data.nombre_variante})`;
+                document.getElementById('escaner-stock-actual').innerText = data.stock_actual || 0;
+                document.getElementById('escaner-cantidad-ingreso').value = 1; 
+                
+                const audio = new Audio('https://actions.google.com/sounds/v1/ui/beep_short.ogg');
+                audio.play().catch(e => console.log("Beep omitido"));
+
+                document.getElementById('modal-ingreso-escaner').style.display = 'flex';
+                setTimeout(() => document.getElementById('escaner-cantidad-ingreso').focus(), 100);
+
+            } catch (error) {
+                console.error("Error al buscar código:", error);
+            }
+        }
+
+        window.cerrarModalEscaner = function() {
+            document.getElementById('modal-ingreso-escaner').style.display = 'none';
+            productoEscaneadoTemp = null;
+        }
+
+        window.confirmarIngresoEscaner = async function() {
+            const cant = document.getElementById('escaner-cantidad-ingreso').value;
+            if (!cant || cant <= 0) return alert("Ingresa una cantidad válida mayor a 0");
+            
+            const btn = document.querySelector('.btn-guardar-ingreso');
+            btn.innerText = "Guardando..."; btn.disabled = true;
+
+            try {
+                const res = await fetch('https://seori-backend.onrender.com/api/inventario/ingreso', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        variante_id: productoEscaneadoTemp.id,
+                        cantidad: cant,
+                        motivo: 'Ingreso rápido con escáner (Panel Admin)'
+                    })
+                });
+
+                if (!res.ok) throw new Error("Error al guardar en BD");
+
+                alert("✅ ¡Stock sumado y guardado en el Kardex exitosamente!");
+                cerrarModalEscaner();
+            } catch (error) {
+                alert("Hubo un error de conexión al guardar el ingreso.");
+            } finally {
+                btn.innerText = "Guardar Ingreso"; btn.disabled = false;
+            }
+        }
     </script>
 </body>
 </html>

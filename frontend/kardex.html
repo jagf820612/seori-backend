@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seori - Kardex y Movimientos</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; padding: 30px; color: #111111; margin: 0; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #111111; padding-bottom: 15px; margin-bottom: 30px; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .btn-volver { background: #ffffff; color: #111111; border: 1px solid #111111; padding: 8px 16px; border-radius: 6px; cursor: pointer; text-decoration: none; font-weight: 600; font-size: 13px; }
+        
+        .tarjeta-info { background: white; border-radius: 8px; padding: 25px; border-top: 4px solid #3498db; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 20px; text-align: center; }
+        
+        table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border-radius: 8px; overflow: hidden; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eeeeee; font-size: 14px; }
+        th { background-color: #111111; color: white; font-weight: 600; }
+        
+        .tipo-entrada { background: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
+        .tipo-salida { background: #f8d7da; color: #721c24; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>📋 Libro Kardex (Movimientos)</h1>
+        <a href="admin.html" class="btn-volver">⬅️ Volver al Panel</a>
+    </div>
+
+    <div class="tarjeta-info">
+        <h3 style="margin:0 0 10px 0;">¿Cómo ingresar nueva mercancía?</h3>
+        <p style="margin:0; color: #555;">Simplemente <strong>conecta tu pistola</strong>, asegúrate de no estar escribiendo en nada, y <strong>dispara al código de barras del producto</strong>. <br>El sistema te preguntará automáticamente cuántos ingresaron y lo guardará aquí abajo.</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Fecha y Hora</th>
+                <th>Producto / Variante</th>
+                <th>Movimiento</th>
+                <th>Cantidad</th>
+                <th>Motivo / Razón</th>
+            </tr>
+        </thead>
+        <tbody id="tabla-kardex">
+            <tr><td colspan="5" style="text-align: center; color: #888;">Cargando historial...</td></tr>
+        </tbody>
+    </table>
+
+    <!-- MODAL DE INGRESO RÁPIDO (Copia exacta del de admin.html por si están parados en esta pantalla) -->
+    <div id="modal-ingreso-escaner" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center;">
+        <div style="background: white; width: 400px; padding: 25px; border-radius: 8px; text-align: center;">
+            <h2 style="margin-top: 0; color: #27ae60;">📦 Escaneo Exitoso</h2>
+            <h3 id="escaner-nombre-producto" style="color: #333; margin-bottom: 5px;">Cargando...</h3>
+            <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Stock actual: <strong id="escaner-stock-actual">0</strong></p>
+            <div style="text-align: left; margin-bottom: 20px;">
+                <label style="font-weight: bold; font-size: 14px;">¿Cuántas unidades acaban de llegar?</label>
+                <input type="number" id="escaner-cantidad-ingreso" min="1" value="1" style="width: 100%; padding: 10px; font-size: 18px; text-align: center; margin-top: 5px;">
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="document.getElementById('modal-ingreso-escaner').style.display='none'" style="flex: 1; padding: 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancelar</button>
+                <button onclick="confirmarIngresoEscaner()" style="flex: 1; padding: 10px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Guardar Ingreso</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Validar seguridad
+        if (localStorage.getItem('rol_activo') !== 'admin') window.location.href = 'login.html';
+
+        async function cargarKardex() {
+            try {
+                const res = await fetch('https://seori-backend.onrender.com/api/kardex');
+                const datos = await res.json();
+                
+                const tbody = document.getElementById('tabla-kardex');
+                tbody.innerHTML = '';
+                
+                if (datos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">No hay movimientos registrados aún.</td></tr>';
+                    return;
+                }
+
+                datos.forEach(mov => {
+                    const fecha = new Date(mov.fecha_hora).toLocaleString('es-CO');
+                    const nombreProd = mov.producto_variantes?.productos?.nombre_producto || 'Desconocido';
+                    const nombreVar = mov.producto_variantes?.nombre_variante || '';
+                    const claseTipo = mov.tipo_movimiento === 'Entrada' ? 'tipo-entrada' : 'tipo-salida';
+                    const signo = mov.tipo_movimiento === 'Entrada' ? '+' : '-';
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${fecha}</td>
+                            <td><strong>${nombreProd}</strong> <br><small style="color: #666;">${nombreVar}</small></td>
+                            <td><span class="${claseTipo}">${mov.tipo_movimiento}</span></td>
+                            <td style="font-weight: bold; font-size: 16px;">${signo}${mov.cantidad}</td>
+                            <td style="color: #555;">${mov.motivo}</td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error("Error cargando Kardex:", error);
+                document.getElementById('tabla-kardex').innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Error al conectar con la base de datos.</td></tr>';
+            }
+        }
+
+        // ====================================================
+        // --- LOGICA DEL ESCANER TAMBIEN EN ESTA PANTALLA ---
+        // ====================================================
+        let codigoAdmin = '';
+        let timerLectorAdmin = null;
+        let productoEscaneadoTemp = null;
+
+        document.addEventListener('keypress', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            if (e.key === 'Enter') {
+                if (codigoAdmin.length > 0) buscarProductoPorCodigo(codigoAdmin);
+                codigoAdmin = ''; clearTimeout(timerLectorAdmin);
+            } else {
+                codigoAdmin += e.key; clearTimeout(timerLectorAdmin);
+                timerLectorAdmin = setTimeout(() => { codigoAdmin = ''; }, 500); 
+            }
+        });
+
+        async function buscarProductoPorCodigo(codigo) {
+            try {
+                const res = await fetch(`https://seori-backend.onrender.com/api/productos/codigo/${codigo}`);
+                if (!res.ok) return alert(`⚠️ Producto no encontrado (Código: ${codigo})`);
+                
+                const data = await res.json();
+                productoEscaneadoTemp = data; 
+                
+                document.getElementById('escaner-nombre-producto').innerText = `${data.productos.nombre_producto} (${data.nombre_variante})`;
+                document.getElementById('escaner-stock-actual').innerText = data.stock_actual || 0;
+                document.getElementById('escaner-cantidad-ingreso').value = 1; 
+                
+                new Audio('https://actions.google.com/sounds/v1/ui/beep_short.ogg').play().catch(e=>{});
+
+                document.getElementById('modal-ingreso-escaner').style.display = 'flex';
+                setTimeout(() => document.getElementById('escaner-cantidad-ingreso').focus(), 100);
+            } catch (error) { console.error(error); }
+        }
+
+        async function confirmarIngresoEscaner() {
+            const cant = document.getElementById('escaner-cantidad-ingreso').value;
+            if (!cant || cant <= 0) return alert("Cantidad inválida");
+            
+            try {
+                const res = await fetch('https://seori-backend.onrender.com/api/inventario/ingreso', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ variante_id: productoEscaneadoTemp.id, cantidad: cant, motivo: 'Ingreso rápido con escáner (Kardex)' })
+                });
+
+                if (!res.ok) throw new Error();
+                
+                document.getElementById('modal-ingreso-escaner').style.display = 'none';
+                cargarKardex(); // Refrescamos la tabla instantáneamente
+                
+            } catch (error) { alert("Error al guardar."); }
+        }
+
+        // Arrancamos
+        cargarKardex();
+    </script>
+</body>
+</html>
