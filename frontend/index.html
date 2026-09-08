@@ -711,6 +711,82 @@
             }
         }
 
+// ==========================================
+        // --- LÓGICA DEL LECTOR DE CÓDIGO DE BARRAS ---
+        // ==========================================
+        let codigoEscaneado = '';
+        let timerLector = null;
+
+        // Escuchamos todo lo que se teclea en la pantalla
+        document.addEventListener('keypress', (e) => {
+            // Si el usuario está escribiendo en el cuadro de observaciones o inputs, ignoramos el escáner
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            // La pistola manda un "Enter" al final de leer el código
+            if (e.key === 'Enter') {
+                if (codigoEscaneado.length > 3) { // Asumimos que un código tiene más de 3 letras/números
+                    procesarCodigoBarras(codigoEscaneado);
+                }
+                codigoEscaneado = '';
+                clearTimeout(timerLector);
+            } else {
+                // Vamos uniendo las letras/números que lee la pistola
+                codigoEscaneado += e.key;
+                clearTimeout(timerLector);
+                
+                // Si pasan más de 50ms sin presionar otra tecla, asumimos que fue tipeo humano y limpiamos
+                timerLector = setTimeout(() => {
+                    codigoEscaneado = '';
+                }, 50); 
+            }
+        });
+
+        async function procesarCodigoBarras(codigo) {
+            try {
+                // Buscamos el producto en el servidor
+                const res = await fetch(`https://seori-backend.onrender.com/api/productos/codigo/${codigo}`);
+                
+                if (!res.ok) {
+                    // Solo mostramos una alerta visual sutil si no lo encuentra, para no interrumpir
+                    console.warn(`Código no encontrado: ${codigo}`);
+                    return; 
+                }
+
+                const data = await res.json();
+
+                // Si es un producto que necesita personalización (helados/bebidas), 
+                // abrimos el modal de extras automáticamente.
+                if (data.productos.categoria_id === 1 || data.productos.categoria_id === 2) {
+                    abrirModalPersonalizacion(
+                        data.productos.categoria_id, 
+                        data.productos.id, 
+                        data.id, 
+                        data.productos.nombre_producto, 
+                        data.nombre_variante, 
+                        data.precio
+                    );
+                } else {
+                    // Si es Merch u otro, lo agregamos directo al carrito
+                    agregarAlCarrito(
+                        data.productos.id, 
+                        data.id, 
+                        data.productos.nombre_producto, 
+                        data.nombre_variante, 
+                        data.precio, 
+                        ""
+                    );
+                    
+                    // Efecto de sonido (opcional) para confirmar que se escaneó bien
+                    const audio = new Audio('https://actions.google.com/sounds/v1/ui/beep_short.ogg');
+                    audio.volume = 0.3;
+                    audio.play().catch(e=>console.log("Audio omitido"));
+                }
+            } catch (error) {
+                console.error("Error al escanear código:", error);
+            }
+        }
+
+        
         iniciarSistema();
     </script>
 </body>
