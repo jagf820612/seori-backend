@@ -41,6 +41,31 @@ app.get('/api/categorias', async (req, res) => {
     }
 });
 
+// --- NUEVA RUTA: Buscar producto por código de barras ---
+app.get('/api/productos/codigo/:codigo', async (req, res) => {
+    try {
+        const { codigo } = req.params;
+        
+        const { data, error } = await supabase
+            .from('producto_variantes')
+            .select(`
+                id, 
+                nombre_variante, 
+                precio, 
+                stock_actual,
+                productos!inner ( id, nombre_producto, categoria_id )
+            `)
+            .eq('codigo_barras', codigo)
+            .single();
+
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        // Si no lo encuentra, no enviamos error 500, sino un 404 para que la caja sepa que no existe
+        res.status(404).json({ error: 'Producto no encontrado con ese código' });
+    }
+});
+
 // --- RUTA: Obtener el menú completo (Productos + Tamaños/Precios) ---
 app.get('/api/menu', async (req, res) => {
     try {
@@ -104,9 +129,9 @@ app.post('/api/pedidos', async (req, res) => {
 
         if (errorDetalles) throw errorDetalles;
 
-        // 3. Descontar inventario solo si el producto lo requiere
+        // 3. Descontar inventario y REGISTRAR EN KARDEX
         for (let item of detalles) {
-            const { data: varianteData, error: errorVar } = await supabase
+            const { data: varianteData } = await supabase
                 .from('producto_variantes')
                 .select(`stock_actual, productos ( controla_inventario )`)
                 .eq('id', item.variante_id)
@@ -114,13 +139,25 @@ app.post('/api/pedidos', async (req, res) => {
 
             if (varianteData && varianteData.productos.controla_inventario) {
                 const nuevoStock = varianteData.stock_actual - item.cantidad;
+                
+                // Actualizamos el stock
                 await supabase
                     .from('producto_variantes')
                     .update({ stock_actual: nuevoStock })
                     .eq('id', item.variante_id);
+                    
+                // REGISTRO EN EL KARDEX (SALIDA POR VENTA)
+                await supabase
+                    .from('kardex_inventario')
+                    .insert([{
+                        variante_id: item.variante_id,
+                        tipo_movimiento: 'Salida',
+                        cantidad: item.cantidad,
+                        fecha_hora: fecha_hora,
+                        motivo: `Venta POS (Pedido #${pedido.id})`
+                    }]);
             }
         }
-
         // 4. ¡FILTRO INTELIGENTE PARA LA TABLET (Ocultar Categoría 6 K-Merch)!
         let detallesParaCocina = [];
 
