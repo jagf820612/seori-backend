@@ -628,6 +628,72 @@ app.delete('/api/productos/:id', async (req, res) => {
     }
 });
 
+// ==========================================
+// --- MÓDULO DE INVENTARIO Y KARDEX ---
+// ==========================================
+
+// 1. Registrar INGRESO de mercancía por escáner o manual
+app.post('/api/inventario/ingreso', async (req, res) => {
+    try {
+        const { variante_id, cantidad, motivo } = req.body;
+        
+        // A. Consultar cuánto hay actualmente
+        const { data: variante, error: errorVar } = await supabase
+            .from('producto_variantes')
+            .select('stock_actual')
+            .eq('id', variante_id)
+            .single();
+            
+        if (errorVar) throw errorVar;
+        
+        const nuevoStock = (variante.stock_actual || 0) + parseInt(cantidad);
+
+        // B. Actualizar el stock sumando lo que llegó
+        await supabase
+            .from('producto_variantes')
+            .update({ stock_actual: nuevoStock })
+            .eq('id', variante_id);
+
+        // C. Escribir el movimiento en el libro del Kardex
+        const { error: errorKardex } = await supabase
+            .from('kardex_inventario')
+            .insert([{
+                variante_id: variante_id,
+                tipo_movimiento: 'Entrada',
+                cantidad: parseInt(cantidad),
+                motivo: motivo || 'Ingreso de mercancía a bodega'
+            }]);
+
+        if (errorKardex) throw errorKardex;
+
+        res.json({ mensaje: '¡Inventario actualizado con éxito!', nuevoStock });
+    } catch (error) {
+        console.error("Error al registrar ingreso:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 2. Consultar el historial de movimientos (Entradas y Salidas)
+app.get('/api/kardex', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('kardex_inventario')
+            .select(`
+                id, tipo_movimiento, cantidad, fecha_hora, motivo,
+                producto_variantes ( nombre_variante, productos ( nombre_producto ) )
+            `)
+            .order('fecha_hora', { ascending: false })
+            .limit(50); // Mostramos los últimos 50 movimientos
+            
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+
 // --- RUTAS DE GASTOS ---
 app.get('/api/gastos', async (req, res) => {
     try {
