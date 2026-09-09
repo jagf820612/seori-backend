@@ -102,11 +102,24 @@
                 <!-- CUADRO DE OBSERVACIONES PARA COCINA -->
                 <textarea id="observaciones_pedido" placeholder="Observaciones generales (Ej: Para llevar, empacar aparte...)" style="width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #dcdde1; font-family: inherit; resize: vertical; min-height: 50px; font-size: 14px; outline: none;"></textarea>
 
-                <select id="metodo_pago" style="width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 6px; font-size: 15px; border: 1px solid #dcdde1; outline: none;">
-                    <option value="Efectivo">💵 Efectivo</option>
-                    <option value="Transferencia">📱 Transferencia (Nequi/Bancolombia)</option>
-                    <option value="QR">🔳 QR Bold</option>
-                </select>
+<select id="metodo_pago" style="width: 100%; padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 15px;" onchange="toggleCalculadoraVueltos()">
+            <option value="Efectivo">💵 Efectivo</option>
+            <option value="Nequi">📱 Nequi</option>
+            <option value="Bancolombia">🏦 Bancolombia</option>
+            <option value="Daviplata">📱 Daviplata</option>
+            <option value="Tarjeta">💳 Tarjeta</option>
+        </select>
+
+        <!-- NUEVA CALCULADORA DE VUELTOS (Se oculta sola si no es efectivo) -->
+        <div id="calculadora-vueltos" style="background: #f1f2f6; padding: 15px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #27ae60;">
+            <label style="font-size: 13px; font-weight: bold; color: #555; display: block; margin-bottom: 5px;">¿Con cuánto pagan?</label>
+            <input type="number" id="monto-recibido" placeholder="Ej: 50000" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; margin-bottom: 10px; outline: none;" oninput="calcularVueltos()">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 14px; font-weight: bold; color: #555;">Cambio (Vueltos):</span>
+                <span id="texto-vueltos" style="font-size: 20px; font-weight: bold; color: #111;">$0</span>
+            </div>
+        </div>
 
                 <button class="btn-cobrar" onclick="procesarVenta()" id="btn-cobrar">Cobrar Venta</button>
             </div>
@@ -524,6 +537,9 @@ function renderizarProductos(categoriaId) {
                 lista.innerHTML += `<div class="item-ticket"><div class="item-info"><strong>${item.nombre}</strong><small>${item.notas ? `${item.variante} | ${item.notas}` : item.variante}</small></div><div style="display:flex; flex-direction:column; align-items:flex-end;"><div class="item-controles"><button class="btn-cant" onclick="cambiarCantidad(${i}, -1)">-</button><span style="font-weight: bold; width: 20px; text-align: center;">${item.cantidad}</span><button class="btn-cant" onclick="cambiarCantidad(${i}, 1)">+</button></div><div style="font-weight: bold; margin-top: 5px;">$${sub}</div></div></div>`;
             });
             document.getElementById('total-monto').innerText = `$${total}`;
+            if (document.getElementById('metodo_pago').value === 'Efectivo') {
+        calcularVueltos();
+    }
         }
 
         // --- FUNCIONES DEL HISTORIAL DE CAJA ---
@@ -674,6 +690,46 @@ function renderizarProductos(categoriaId) {
             ventana.document.close();
         }
 
+// ==========================================
+        // --- LÓGICA DE CALCULADORA DE VUELTOS ---
+        // ==========================================
+        function toggleCalculadoraVueltos() {
+            const metodo = document.getElementById('metodo_pago').value;
+            const divCalculadora = document.getElementById('calculadora-vueltos');
+            if (metodo === 'Efectivo') {
+                divCalculadora.style.display = 'block';
+                calcularVueltos(); // Recalcula por si ya había un monto escrito
+            } else {
+                divCalculadora.style.display = 'none';
+            }
+        }
+
+        function calcularVueltos() {
+            // Sumamos el total actual del carrito
+            const totalCompra = carrito.reduce((sum, item) => sum + item.subtotal, 0);
+            const inputMonto = document.getElementById('monto-recibido').value;
+            const textoVueltos = document.getElementById('texto-vueltos');
+
+            if (!inputMonto || inputMonto === '') {
+                textoVueltos.innerText = "$0";
+                textoVueltos.style.color = "#111";
+                return;
+            }
+
+            const recibido = parseFloat(inputMonto);
+            const cambio = recibido - totalCompra;
+
+            if (cambio < 0) {
+                // Si la plata no alcanza, se pone rojo y avisa cuánto falta
+                textoVueltos.innerText = "Faltan $" + Math.abs(cambio).toLocaleString('es-CO');
+                textoVueltos.style.color = "#e74c3c"; 
+            } else {
+                // Si la plata alcanza o sobra, muestra el vuelto en verde
+                textoVueltos.innerText = "$" + cambio.toLocaleString('es-CO');
+                textoVueltos.style.color = "#27ae60"; 
+            }
+        }
+
         window.procesarVenta = async () => {
             if (!carrito.length) return alert("Ticket vacío.");
             const btn = document.getElementById('btn-cobrar'); btn.innerText = "Procesando..."; btn.disabled = true;
@@ -702,6 +758,8 @@ function renderizarProductos(categoriaId) {
                 carrito = []; 
                 actualizarTicket();
                 document.getElementById('observaciones_pedido').value = '';
+                document.getElementById('monto-recibido').value = '';
+    calcularVueltos();
 
             } catch (e) { 
                 alert("Error al cobrar."); 
