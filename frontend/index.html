@@ -109,6 +109,7 @@
                 <textarea id="observaciones_pedido" placeholder="Observaciones (Ej: Para llevar...)" style="width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #dcdde1; font-family: inherit; resize: none; height: 42px; font-size: 13px; outline: none;"></textarea>
 
                 <select id="metodo_pago" style="width: 100%; padding: 8px; font-size: 14px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 10px;" onchange="toggleCalculadoraVueltos()">
+                    <option value="" disabled selected>-- Selecciona método de pago --</option>
                     <option value="Efectivo">💵 Efectivo</option>
                     <option value="QR">📱 QR Bold</option>
                     <option value="Transferencia">🏦 Transferencia</option>
@@ -569,11 +570,13 @@
 
         window.procesarVenta = async () => {
             if (!carrito.length) return alert("Ticket vacío.");
-            const btn = document.getElementById('btn-cobrar'); btn.innerText = "Procesando..."; btn.disabled = true;
             
+            // NUEVA VALIDACIÓN: Frena la venta si no eligió cómo pagar
             const metodo = document.getElementById('metodo_pago').value;
+            if (!metodo) return alert("⚠️ Por favor, selecciona con qué método van a pagar.");
+
+            const btn = document.getElementById('btn-cobrar'); btn.innerText = "Procesando..."; btn.disabled = true;
             const observaciones = document.getElementById('observaciones_pedido').value;
-            
             const detalles = carrito.map(i => { return { variante_id: i.idVariante, cantidad: i.cantidad, subtotal: i.precio * i.cantidad, nombre: i.nombre, variante: i.variante, notas: i.notas }; });
             
             try {
@@ -589,10 +592,13 @@
                 imprimirTicket(carrito, granTotalVenta, metodo, data.pedido_id);
                 alert(`¡Venta cobrada! ($${granTotalVenta})`);
                 
+                // LIMPIEZA TOTAL PARA EL SIGUIENTE CLIENTE
                 carrito = []; 
                 actualizarTicket();
                 document.getElementById('observaciones_pedido').value = '';
                 document.getElementById('monto-recibido').value = '';
+                document.getElementById('metodo_pago').value = ''; // Vuelve a la opción en blanco
+                toggleCalculadoraVueltos(); // Oculta la calculadora de efectivo
                 calcularVueltos();
 
             } catch (e) { 
