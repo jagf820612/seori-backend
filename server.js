@@ -592,13 +592,14 @@ app.post('/api/productos', async (req, res) => {
             
         if (prodError) throw prodError;
         
-        if (variantes && variantes.length > 0) {
+if (variantes && variantes.length > 0) {
             const listaVariantes = variantes.map(v => ({
                 producto_id: prodData.id,
                 nombre_variante: v.nombre_variante,
                 precio: parseFloat(v.precio),
                 stock_actual: parseInt(v.stock_actual) || 0,
-                stock_minimo: parseInt(v.stock_minimo) || 0
+                stock_minimo: parseInt(v.stock_minimo) || 0,
+                codigo_barras: v.codigo_barras || null // <-- NUEVO CAMPO AÑADIDO
             }));
             
             const { error: varError } = await supabase
@@ -606,13 +607,56 @@ app.post('/api/productos', async (req, res) => {
                 .insert(listaVariantes);
                 
             if (varError) throw varError;
-        }
-        
+        }        
         res.json({ mensaje: 'Producto y variantes creados con éxito' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
+
+// --- NUEVA RUTA: Carga Masiva de Productos desde CSV ---
+app.post('/api/productos/masivo', async (req, res) => {
+    try {
+        const productosCSV = req.body; 
+
+        for (let item of productosCSV) {
+            // 1. Crear el producto maestro
+            const { data: prodData, error: prodError } = await supabase
+                .from('productos')
+                .insert([{ 
+                    nombre_producto: item.nombre_producto, 
+                    categoria_id: parseInt(item.categoria_id), 
+                    disponible: true, 
+                    controla_inventario: true,
+                    imagen: '' 
+                }])
+                .select()
+                .single();
+            
+            if (prodError) throw prodError;
+
+            // 2. Crear su variante y enlazar el código de barras
+            const { error: varError } = await supabase
+                .from('producto_variantes')
+                .insert([{
+                    producto_id: prodData.id,
+                    nombre_variante: item.nombre_variante || 'Única',
+                    precio: parseFloat(item.precio),
+                    stock_actual: parseInt(item.stock_actual) || 0,
+                    stock_minimo: parseInt(item.stock_minimo) || 0,
+                    codigo_barras: item.codigo_barras || null
+                }]);
+
+            if (varError) throw varError;
+        }
+
+        res.json({ mensaje: '¡Carga masiva procesada e insertada en la base de datos!' });
+    } catch (error) {
+        console.error("Error en carga masiva:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 
 // 3. Eliminar producto
 app.delete('/api/productos/:id', async (req, res) => {
