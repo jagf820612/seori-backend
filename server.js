@@ -615,31 +615,48 @@ if (variantes && variantes.length > 0) {
 });
 
 // --- NUEVA RUTA: Carga Masiva de Productos desde CSV ---
+// --- NUEVA RUTA: Carga Masiva de Productos desde CSV (AGRUPACIÓN INTELIGENTE) ---
 app.post('/api/productos/masivo', async (req, res) => {
     try {
         const productosCSV = req.body; 
 
         for (let item of productosCSV) {
-            // 1. Crear el producto maestro
-            const { data: prodData, error: prodError } = await supabase
+            // 1. Verificar si el producto MAESTRO ya existe en esa categoría
+            let { data: productoExistente, error: errorBusqueda } = await supabase
                 .from('productos')
-                .insert([{ 
-                    nombre_producto: item.nombre_producto, 
-                    categoria_id: parseInt(item.categoria_id), 
-                    disponible: true, 
-                    controla_inventario: true,
-                    imagen: '' 
-                }])
-                .select()
-                .single();
-            
-            if (prodError) throw prodError;
+                .select('id')
+                .eq('nombre_producto', item.nombre_producto.trim())
+                .eq('categoria_id', parseInt(item.categoria_id))
+                .maybeSingle(); // maybeSingle no da error si no encuentra nada (devuelve null)
 
-            // 2. Crear su variante y enlazar el código de barras
+            let idProductoMaestro;
+
+            if (productoExistente) {
+                // Si el producto ya existe (Ej: "Figura PVC - Demon Slayer"), usamos su ID para agruparlo
+                idProductoMaestro = productoExistente.id;
+            } else {
+                // Si no existe, creamos la tarjeta maestra por primera vez
+                const { data: prodData, error: prodError } = await supabase
+                    .from('productos')
+                    .insert([{ 
+                        nombre_producto: item.nombre_producto.trim(), 
+                        categoria_id: parseInt(item.categoria_id), 
+                        disponible: true, 
+                        controla_inventario: true,
+                        imagen: '' 
+                    }])
+                    .select()
+                    .single();
+                
+                if (prodError) throw prodError;
+                idProductoMaestro = prodData.id;
+            }
+
+            // 2. Crear la variante y guardarla dentro de la tarjeta maestra
             const { error: varError } = await supabase
                 .from('producto_variantes')
                 .insert([{
-                    producto_id: prodData.id,
+                    producto_id: idProductoMaestro,
                     nombre_variante: item.nombre_variante || 'Única',
                     precio: parseFloat(item.precio),
                     stock_actual: parseInt(item.stock_actual) || 0,
@@ -650,7 +667,7 @@ app.post('/api/productos/masivo', async (req, res) => {
             if (varError) throw varError;
         }
 
-        res.json({ mensaje: '¡Carga masiva procesada e insertada en la base de datos!' });
+        res.json({ mensaje: '¡Carga masiva procesada y agrupada correctamente!' });
     } catch (error) {
         console.error("Error en carga masiva:", error);
         res.status(500).json({ error: error.message });
