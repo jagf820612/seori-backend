@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seori - Dashboard Analítico</title>
+    <!-- Importamos Chart.js para las gráficas -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', sans-serif; padding: 20px 40px; color: #333; margin: 0; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #111; padding-bottom: 15px; margin-bottom: 25px; }
+        .header h1 { margin: 0; font-size: 24px; color: #111; }
+        .btn-volver { background: #fff; color: #111; border: 1px solid #111; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px; }
+        
+        .filtros { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 20px; display: flex; gap: 15px; align-items: flex-end; }
+        .grupo-filtro { display: flex; flex-direction: column; gap: 5px; }
+        .grupo-filtro label { font-size: 13px; font-weight: bold; color: #555; }
+        .grupo-filtro input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; }
+        .btn-consultar { background: #111; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; height: 38px; }
+        
+        /* Tarjetas de resumen (KPIs) */
+        .kpi-container { display: flex; gap: 20px; margin-bottom: 25px; }
+        .kpi-card { flex: 1; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border-left: 5px solid #111; }
+        .kpi-card h3 { margin: 0 0 10px 0; font-size: 14px; color: #666; text-transform: uppercase; }
+        .kpi-card .valor { font-size: 28px; font-weight: bold; color: #111; margin: 0; }
+        
+        /* Grillas para gráficas */
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        .chart-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        .chart-box h3 { margin: 0 0 15px 0; font-size: 16px; color: #111; text-align: center; }
+        
+        /* Tabla de inventario */
+        .tabla-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; }
+        th, td { padding: 12px; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; color: #333; }
+        .alerta-stock { color: #e74c3c; font-weight: bold; background: #fadbd8; padding: 3px 8px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>📊 Dashboard Analítico Seori</h1>
+        <a href="admin.html" class="btn-volver">⬅️ Volver al Panel</a>
+    </div>
+
+    <!-- Barra de Filtros de Fecha -->
+    <div class="filtros">
+        <div class="grupo-filtro">
+            <label>Desde:</label>
+            <input type="date" id="fecha-inicio">
+        </div>
+        <div class="grupo-filtro">
+            <label>Hasta:</label>
+            <input type="date" id="fecha-fin">
+        </div>
+        <button class="btn-consultar" onclick="cargarDashboard()">Generar Reporte</button>
+    </div>
+
+    <!-- Tarjetas de Resumen Rápido -->
+    <div class="kpi-container">
+        <div class="kpi-card" style="border-left-color: #27ae60;">
+            <h3>Ingresos Totales (Rango)</h3>
+            <p class="valor" id="kpi-ingresos">$0</p>
+        </div>
+        <div class="kpi-card" style="border-left-color: #3498db;">
+            <h3>Pedidos Atendidos</h3>
+            <p class="valor" id="kpi-pedidos">0</p>
+        </div>
+        <div class="kpi-card" style="border-left-color: #f1c40f;">
+            <h3>Producto Estrella</h3>
+            <p class="valor" id="kpi-estrella" style="font-size: 18px;">-</p>
+        </div>
+    </div>
+
+    <!-- Zona de Gráficas -->
+    <div class="charts-grid">
+        <div class="chart-box">
+            <h3>📈 Productos Más Vendidos (Top 5)</h3>
+            <canvas id="chartTopVentas"></canvas>
+        </div>
+        <div class="chart-box">
+            <h3>📉 Productos Menos Vendidos</h3>
+            <canvas id="chartPeorVentas"></canvas>
+        </div>
+        <div class="chart-box">
+            <h3>⏰ Horas con Más Tráfico (Clientes por Hora)</h3>
+            <canvas id="chartHoras"></canvas>
+        </div>
+        <div class="chart-box">
+            <h3>📅 Días Más Movidos (Clientes por Día)</h3>
+            <canvas id="chartDias"></canvas>
+        </div>
+    </div>
+
+    <!-- Zona de Inventario en Tiempo Real -->
+    <div class="tabla-container">
+        <h3 style="margin-top:0;">📦 Estado del Inventario (Stock)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Producto / Variante</th>
+                    <th>Stock Actual</th>
+                    <th>Stock Mínimo Ideal</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-inventario">
+                <tr><td colspan="4" style="text-align:center;">Cargando inventario...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Validar que sea admin
+        if (localStorage.getItem('rol_activo') !== 'admin') window.location.href = 'login.html';
+
+        // Variables para destruir gráficas viejas al recargar
+        let objChartTop, objChartPeor, objChartHoras, objChartDias;
+
+        // Configurar fechas por defecto (Día actual)
+        document.addEventListener('DOMContentLoaded', () => {
+            const hoy = new Date();
+            // Ajustamos a hora local Colombia rápido para el input
+            const offset = -5 * 60; // Minutos
+            const local = new Date(hoy.getTime() + offset * 60 * 1000);
+            const fechaStr = local.toISOString().split('T')[0];
+            
+            // Por defecto consulta desde hace 7 días hasta hoy
+            const hace7Dias = new Date(local.getTime() - (7 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+            
+            document.getElementById('fecha-inicio').value = hace7Dias;
+            document.getElementById('fecha-fin').value = fechaStr;
+            
+            cargarDashboard();
+        });
+
+        async function cargarDashboard() {
+            // Preparar las fechas para enviar al servidor (Agregamos horas para cubrir el día completo)
+            const fInicio = document.getElementById('fecha-inicio').value + "T00:00:00.000Z";
+            const fFin = document.getElementById('fecha-fin').value + "T23:59:59.999Z";
+
+            try {
+                // Modifica esta URL con la tuya de Render
+                const res = await fetch(`https://seori-backend.onrender.com/api/reportes/dashboard?inicio=${fInicio}&fin=${fFin}`);
+                const data = await res.json();
+
+                // 1. Llenar KPIs
+                document.getElementById('kpi-ingresos').innerText = "$" + data.totalIngresos.toLocaleString('es-CO');
+                document.getElementById('kpi-pedidos').innerText = data.totalPedidos;
+                
+                if (data.rankingProductos.length > 0) {
+                    const top = data.rankingProductos[0];
+                    document.getElementById('kpi-estrella').innerText = `${top.nombre} (${top.cantidad} unds)`;
+                } else {
+                    document.getElementById('kpi-estrella').innerText = "Sin ventas en este rango";
+                }
+
+                // 2. Preparar Datos para Gráficas
+                const top5 = data.rankingProductos.slice(0, 5);
+                // Para los menos vendidos, invertimos la lista, tomamos 5 y los ordenamos ascendente
+                const peores5 = [...data.rankingProductos].reverse().slice(0, 5);
+
+                dibujarGraficaTopVentas(top5);
+                dibujarGraficaPeorVentas(peores5);
+                dibujarGraficaHoras(data.ventasPorHora);
+                dibujarGraficaDias(data.ventasPorDia);
+
+                // 3. Llenar Tabla de Inventario
+                llenarTablaInventario(data.inventario);
+
+            } catch (error) {
+                console.error(error);
+                alert("Error al cargar estadísticas.");
+            }
+        }
+
+        // --- FUNCIONES DE DIBUJO DE GRÁFICAS (CHART.JS) ---
+
+        function dibujarGraficaTopVentas(datos) {
+            const ctx = document.getElementById('chartTopVentas').getContext('2d');
+            if (objChartTop) objChartTop.destroy();
+
+            objChartTop = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: datos.map(d => d.nombre.substring(0, 20) + (d.nombre.length > 20 ? '...' : '')),
+                    datasets: [{
+                        label: 'Unidades Vendidas',
+                        data: datos.map(d => d.cantidad),
+                        backgroundColor: '#27ae60'
+                    }]
+                },
+                options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        function dibujarGraficaPeorVentas(datos) {
+            const ctx = document.getElementById('chartPeorVentas').getContext('2d');
+            if (objChartPeor) objChartPeor.destroy();
+
+            objChartPeor = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: datos.map(d => d.nombre.substring(0, 20) + (d.nombre.length > 20 ? '...' : '')),
+                    datasets: [{
+                        label: 'Unidades Vendidas',
+                        data: datos.map(d => d.cantidad),
+                        backgroundColor: '#e74c3c'
+                    }]
+                },
+                options: { responsive: true, indexAxis: 'y', scales: { x: { beginAtZero: true } } } // Gráfica horizontal
+            });
+        }
+
+        function dibujarGraficaHoras(arregloHoras) {
+            const ctx = document.getElementById('chartHoras').getContext('2d');
+            if (objChartHoras) objChartHoras.destroy();
+
+            // Labels de 0 a 23 horas
+            const labels = Array.from({length: 24}, (_, i) => `${i}:00`);
+
+            objChartHoras = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Cant. Pedidos (Tráfico)',
+                        data: arregloHoras,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                        fill: true,
+                        tension: 0.4 // Curvas suaves
+                    }]
+                },
+                options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        function dibujarGraficaDias(objetoDias) {
+            const ctx = document.getElementById('chartDias').getContext('2d');
+            if (objChartDias) objChartDias.destroy();
+
+            const ordenDias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+            const dataOrdenada = ordenDias.map(dia => objetoDias[dia] || 0);
+
+            objChartDias = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ordenDias,
+                    datasets: [{
+                        label: 'Pedidos por Día',
+                        data: dataOrdenada,
+                        backgroundColor: '#9b59b6'
+                    }]
+                },
+                options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        // --- TABLA DE INVENTARIO ---
+        function llenarTablaInventario(inventario) {
+            const tbody = document.getElementById('tabla-inventario');
+            tbody.innerHTML = '';
+
+            if(inventario.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay productos con control de stock activado.</td></tr>';
+                return;
+            }
+
+            // Ordenar alfabéticamente
+            inventario.sort((a,b) => a.productos.nombre_producto.localeCompare(b.productos.nombre_producto));
+
+            inventario.forEach(item => {
+                const nombre = `<strong>${item.productos.nombre_producto}</strong> <br><small style="color:#666;">${item.nombre_variante}</small>`;
+                
+                let estadoHtml = `<span style="color:#27ae60; font-weight:bold;">Suficiente</span>`;
+                if (item.stock_actual <= item.stock_minimo) {
+                    estadoHtml = `<span class="alerta-stock">⚠️ Stock Bajo</span>`;
+                }
+                if (item.stock_actual === 0) {
+                    estadoHtml = `<span class="alerta-stock" style="background:#e74c3c; color:white;">Agotado</span>`;
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${nombre}</td>
+                        <td style="font-size:16px; font-weight:bold;">${item.stock_actual}</td>
+                        <td style="color:#666;">${item.stock_minimo}</td>
+                        <td>${estadoHtml}</td>
+                    </tr>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
