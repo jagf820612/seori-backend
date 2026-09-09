@@ -789,6 +789,103 @@ app.post('/api/gastos', async (req, res) => {
     }
 });
 
+// ==========================================
+// --- MÓDULO DE REPORTES Y DASHBOARD ---
+// ==========================================
+
+app.get('/api/reportes/dashboard', async (req, res) => {
+    try {
+        const { inicio, fin } = req.query; // Recibimos el rango de fechas
+
+        // 1. OBTENER PEDIDOS EN EL RANGO DE FECHAS
+        const { data: pedidos, error: errPedidos } = await supabase
+            .from('pedidos')
+            .select(`
+                id, fecha_hora, total, estado,
+                detalle_pedidos (
+                    cantidad, subtotal,
+                    producto_variantes (
+                        nombre_variante,
+                        productos ( nombre_producto, categoria_id )
+                    )
+                )
+            `)
+            .gte('fecha_hora', inicio)
+            .lte('fecha_hora', fin)
+            .eq('estado', 'Completado'); // Solo contamos ventas reales y cerradas
+        
+        if (errPedidos) throw errPedidos;
+
+        // Variables para las métricas
+        let ventasTotales = 0;
+        let ventasPorHora = Array(24).fill(0); // 24 horas del día
+        let ventasPorDia = { 'Domingo':0, 'Lunes':0, 'Martes':0, 'Miércoles':0, 'Jueves':0, 'Viernes':0, 'Sábado':0 };
+        const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        let rankingProductos = {};
+
+        // 2. PROCESAR LA DATA (Masticar los números)
+        pedidos.forEach(p => {
+            ventasTotales += parseFloat(p.total);
+            
+            // Ajuste a Zona Horaria de Colombia (UTC -5)
+            const fechaOriginal = new Date(p.fecha_hora);
+            const fechaColombia = new Date(fechaOriginal.getTime() - (5 * 60 * 60 * 1000));
+            
+            const hora = fechaColombia.getUTCHours();
+            const dia = diasSemana[fechaColombia.getUTCDay()];
+            
+            // Sumamos 1 pedido a esa hora y a ese día para ver "tráfico de clientes"
+            ventasPorHora[hora] += 1; 
+            ventasPorDia[dia] += 1;
+
+            // Analizamos qué se vendió por dentro (Para el Top de más y menos vendidos)
+            p.detalle_pedidos.forEach(d => {
+                const cat = d.producto_variantes?.productos?.categoria_id;
+                const nombre = `${d.producto_variantes?.productos?.nombre_producto} (${d.producto_variantes?.nombre_variante})`;
+                
+                if (!rankingProductos[nombre]) {
+                    rankingProductos[nombre] = { cantidad: 0, categoria: cat, ingresos: 0 };
+                }
+                rankingProductos[nombre].cantidad += d.cantidad;
+                rankingProductos[nombre].ingresos += d.subtotal;
+            });
+        });
+
+        // Convertir el ranking en una lista ordenable
+        const rankingArray = Object.keys(rankingProductos).map(k => ({
+            nombre: k,
+            ...rankingProductos[k]
+        })).sort((a, b) => b.cantidad - a.cantidad); // Ordenado del más vendido al menos vendido
+
+        // 3. OBTENER ESTADO DEL INVENTARIO ACTUAL
+        const { data: inventario, error: errInv } = await supabase
+            .from('producto_variantes')
+            .select(`
+                stock_actual, stock_minimo, nombre_variante,
+                productos ( nombre_producto, categoria_id, controla_inventario )
+            `);
+
+        if (errInv) throw errInv;
+
+        // Filtramos solo los que controlan inventario (K-Merch, etc.)
+        const inventarioActivo = inventario.filter(i => i.productos && i.productos.controla_inventario);
+
+        // 4. DEVOLVER TODO EL PAQUETE AL DASHBOARD
+        res.json({
+            totalIngresos: ventasTotales,
+            totalPedidos: pedidos.length,
+            ventasPorHora,
+            ventasPorDia,
+            rankingProductos: rankingArray,
+            inventario: inventarioActivo
+        });
+
+    } catch (error) {
+        console.error("Error en Dashboard:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.use(express.static(path.join(__dirname, 'frontend')));
 
 app.get('/', (req, res) => {
