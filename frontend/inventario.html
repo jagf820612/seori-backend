@@ -20,6 +20,15 @@
         .header-container h1 { margin: 0; color: #111111; font-size: 24px; }
         .logo-pequeno { height: 35px; width: auto; object-fit: contain; }
 
+        /* PANEL DE CARGA MASIVA */
+        .panel-carga { background: white; border-radius: 8px; padding: 20px; border-top: 4px solid #27ae60; box-shadow: 0 4px 12px rgba(0,0,0,0.03); max-width: 1200px; margin: 0 auto 20px auto; display: flex; align-items: center; justify-content: space-between; border-left: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0; border-bottom: 1px solid #e0e0e0; }
+        .btn-cargar { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: background 0.2s; }
+        .btn-cargar:hover { background: #219653; }
+        #input-csv { display: none; }
+        .estado-carga { font-weight: 600; font-size: 14px; margin-left: 15px; }
+        .exito { color: #27ae60; }
+        .error { color: #e74c3c; }
+
         .contenedor { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; align-items: flex-start; }
         
         .panel-form { background: white; padding: 20px; border-radius: 8px; width: 40%; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #e0e0e0; border-top: 4px solid #111111; }
@@ -57,10 +66,23 @@
         <h1>📦 Gestión de Inventario</h1>
         <img src="img/logo-seori.png" alt="Seori Logo" class="logo-pequeno">
     </div>
+
+    <!-- NUEVO: PANEL DE CARGA MASIVA -->
+    <div class="panel-carga">
+        <div>
+            <h3 style="margin: 0 0 5px 0; color: #111111;">📥 Carga Masiva (CSV)</h3>
+            <p style="margin: 0; color: #666; font-size: 13px;">Sube tu plantilla de Excel para crear K-Merch y sus códigos de barras automáticamente.</p>
+        </div>
+        <div style="display: flex; align-items: center;">
+            <button class="btn-cargar" onclick="document.getElementById('input-csv').click()">📁 Seleccionar Archivo CSV</button>
+            <input type="file" id="input-csv" accept=".csv" onchange="procesarArchivoCSV(event)">
+            <span id="mensaje-estado" class="estado-carga"></span>
+        </div>
+    </div>
     
     <div class="contenedor">
         <div class="panel-form">
-            <h3 style="margin-top: 0; font-size: 16px; color: #111111;">Crear Producto</h3>
+            <h3 style="margin-top: 0; font-size: 16px; color: #111111;">Crear Producto Manual</h3>
             
             <div class="grupo-input">
                 <label>Nombre del Producto</label>
@@ -117,6 +139,75 @@
     <script>
         if (localStorage.getItem('rol_activo') !== 'admin') window.location.href = 'login.html';
 
+        // --- LÓGICA DE CARGA MASIVA CSV ---
+        function procesarArchivoCSV(evento) {
+            const archivo = evento.target.files[0];
+            if (!archivo) return;
+
+            const divEstado = document.getElementById('mensaje-estado');
+            divEstado.innerText = "⏳ Leyendo...";
+            divEstado.className = "estado-carga";
+
+            const lector = new FileReader();
+            
+            lector.onload = async function(e) {
+                const contenido = e.target.result;
+                const lineas = contenido.split('\n').filter(linea => linea.trim() !== '');
+                
+                if (lineas.length < 2) {
+                    divEstado.innerText = "❌ Archivo vacío o inválido.";
+                    divEstado.classList.add("error");
+                    return;
+                }
+
+                // Detectamos si está separado por comas o punto y coma
+                const separador = lineas[0].includes(';') ? ';' : ',';
+                const encabezados = lineas[0].split(separador).map(h => h.trim().toLowerCase());
+
+                const productosAEnviar = [];
+
+                for (let i = 1; i < lineas.length; i++) {
+                    const valores = lineas[i].split(separador);
+                    let filaJson = {};
+                    
+                    encabezados.forEach((encabezado, index) => {
+                        filaJson[encabezado] = valores[index] ? valores[index].trim() : '';
+                    });
+
+                    productosAEnviar.push(filaJson);
+                }
+
+                divEstado.innerText = `⏳ Subiendo ${productosAEnviar.length} productos...`;
+                divEstado.classList.remove("error", "exito");
+
+                try {
+                    const res = await fetch('https://seori-backend.onrender.com/api/productos/masivo', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(productosAEnviar)
+                    });
+
+                    if (!res.ok) throw new Error("Fallo en el servidor al guardar");
+
+                    divEstado.innerText = `✅ ¡${productosAEnviar.length} productos cargados!`;
+                    divEstado.classList.add("exito");
+                    
+                    document.getElementById('input-csv').value = '';
+                    
+                    // Refrescamos la tabla para ver los nuevos productos
+                    cargarProductos();
+
+                } catch (error) {
+                    console.error(error);
+                    divEstado.innerText = "❌ Error al guardar. Revisa la consola.";
+                    divEstado.classList.add("error");
+                }
+            };
+
+            lector.readAsText(archivo, 'UTF-8');
+        }
+
+        // --- LÓGICA MANUAL EXISTENTE ---
         function agregarFilaVariante() {
             const html = `
                 <div class="fila-variante">
