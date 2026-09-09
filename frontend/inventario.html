@@ -140,6 +140,7 @@
         if (localStorage.getItem('rol_activo') !== 'admin') window.location.href = 'login.html';
 
         // --- LÓGICA DE CARGA MASIVA CSV ---
+        // --- LÓGICA DE CARGA MASIVA CSV BLINDADA ---
         function procesarArchivoCSV(evento) {
             const archivo = evento.target.files[0];
             if (!archivo) return;
@@ -171,10 +172,23 @@
                     let filaJson = {};
                     
                     encabezados.forEach((encabezado, index) => {
-                        filaJson[encabezado] = valores[index] ? valores[index].trim() : '';
+                        // Ignoramos columnas extra vacías generadas por Excel
+                        if (!encabezado) return; 
+                        
+                        let valor = valores[index] ? valores[index].trim() : '';
+                        
+                        // LIMPIEZA INTELIGENTE: Quitamos signos $ y puntos de miles
+                        if (encabezado === 'precio') {
+                            valor = valor.replace(/\$/g, '').replace(/\./g, '').trim();
+                        }
+                        
+                        filaJson[encabezado] = valor;
                     });
 
-                    productosAEnviar.push(filaJson);
+                    // Solo enviamos la fila si realmente tiene un nombre (evita filas en blanco)
+                    if (filaJson['nombre_producto']) {
+                        productosAEnviar.push(filaJson);
+                    }
                 }
 
                 divEstado.innerText = `⏳ Subiendo ${productosAEnviar.length} productos...`;
@@ -206,6 +220,8 @@
 
             lector.readAsText(archivo, 'UTF-8');
         }
+
+
 
         // --- LÓGICA MANUAL EXISTENTE ---
         function agregarFilaVariante() {
