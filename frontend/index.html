@@ -336,30 +336,30 @@
             renderizarProductos(categoriaId);
         }
 
-        function renderizarProductos(categoriaId) {
+function renderizarProductos(categoriaId) {
             const grid = document.getElementById('grid-productos');
             grid.innerHTML = ''; 
             
             let filtrados = todosLosProductos.filter(p => p.categoria_id === categoriaId && p.disponible);
             
-            // ORDEN ALFABÉTICO (Aplica para Toppings Categoría 4, y general para limpieza)
+            // ORDEN ALFABÉTICO
             filtrados.sort((a, b) => a.nombre_producto.localeCompare(b.nombre_producto));
 
             if (filtrados.length === 0) return grid.innerHTML = '<h4>No hay productos.</h4>';
             
-            // SI ES K-MERCH (CATEGORÍA 6), MOSTRAMOS SOLO EL PRODUCTO Y ABRE MODAL
+            // SI ES K-MERCH (CATEGORÍA 6), MOSTRAMOS SOLO EL PRODUCTO Y ABRE MODAL (SIN PRECIO)
             if (categoriaId === 6) {
                 filtrados.forEach(prod => {
                     const btn = document.createElement('div');
                     btn.className = 'card-producto';
                     btn.onclick = () => abrirModalVariantesMerch(prod);
-                    let precioMostrar = prod.producto_variantes && prod.producto_variantes.length > 0 ? `$${prod.producto_variantes[0].precio}` : '';
                     
-                    btn.innerHTML = `<div><h4>${prod.nombre_producto}</h4><p style="color: #3498db; font-weight:bold;">Ver opciones</p></div><div class="precio">${precioMostrar}</div>`;
+                    // Se deja el div del precio vacío
+                    btn.innerHTML = `<div><h4>${prod.nombre_producto}</h4><p style="color: #3498db; font-weight:bold;">Ver opciones</p></div><div class="precio"></div>`;
                     grid.appendChild(btn);
                 });
             } else {
-                // FLUJO NORMAL PARA EL RESTO DE CATEGORÍAS
+                // FLUJO NORMAL PARA EL RESTO DE CATEGORÍAS (Helados, Bebidas, etc.)
                 filtrados.forEach(prod => {
                     if (!prod.producto_variantes) return;
                     prod.producto_variantes.forEach(variante => {
