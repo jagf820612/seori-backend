@@ -166,7 +166,7 @@
                 dibujarGraficaTopVentas(top5);
                 dibujarGraficaPeorVentas(peores5);
                 dibujarGraficaHoras(data.ventasPorHora);
-                dibujarGraficaDias(data.ventasPorDia);
+                dibujarGraficaDias(data.ventasPorDia, fInicio, fFin);;
 
                 // 3. Llenar Tabla de Inventario
                 llenarTablaInventario(data.inventario);
@@ -239,24 +239,60 @@
             });
         }
 
-        function dibujarGraficaDias(objetoDias) {
+        function dibujarGraficaDias(objetoDias, strInicio, strFin) {
             const ctx = document.getElementById('chartDias').getContext('2d');
             if (objChartDias) objChartDias.destroy();
 
             const ordenDias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-            const dataOrdenada = ordenDias.map(dia => objetoDias[dia] || 0);
+            
+            // 1. Calcular cuántos Lunes, Martes, etc., hubo en el rango seleccionado
+            let conteoDiasRango = { 'Lunes':0, 'Martes':0, 'Miércoles':0, 'Jueves':0, 'Viernes':0, 'Sábado':0, 'Domingo':0 };
+            
+            let fechaActual = new Date(strInicio);
+            const fechaFinal = new Date(strFin);
+            const nombresDias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+            while(fechaActual <= fechaFinal) {
+                conteoDiasRango[nombresDias[fechaActual.getUTCDay()]]++;
+                fechaActual.setUTCDate(fechaActual.getUTCDate() + 1); // Sumar un día
+            }
+
+            // 2. Calcular el promedio (Total acumulado / Cantidad de días reales)
+            const dataPromedio = ordenDias.map(dia => {
+                const totalAcumulado = objetoDias[dia] || 0;
+                const vecesQuePasoEseDia = conteoDiasRango[dia] || 1; // Evitar división por cero
+                
+                if (totalAcumulado === 0) return 0;
+                // Redondeamos a 1 decimal (Ej: 32.5 pedidos promedio)
+                return parseFloat((totalAcumulado / vecesQuePasoEseDia).toFixed(1)); 
+            });
 
             objChartDias = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: ordenDias,
                     datasets: [{
-                        label: 'Pedidos por Día',
-                        data: dataOrdenada,
+                        label: 'Promedio de Pedidos',
+                        data: dataPromedio,
                         backgroundColor: '#9b59b6'
                     }]
                 },
-                options: { responsive: true, scales: { y: { beginAtZero: true } } }
+                options: { 
+                    responsive: true,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                // Truco para mostrar el acumulado al pasar el mouse
+                                afterLabel: function(context) {
+                                    const dia = context.label;
+                                    const acumulado = objetoDias[dia] || 0;
+                                    return `(Total acumulado: ${acumulado} pedidos)`;
+                                }
+                            }
+                        }
+                    },
+                    scales: { y: { beginAtZero: true } } 
+                }
             });
         }
 
