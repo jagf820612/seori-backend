@@ -25,11 +25,12 @@
 
         .panel-productos { padding: 20px; overflow-y: auto; flex: 1; }
         .grid-productos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
-        .card-producto { background: white; border-radius: 8px; padding: 15px; text-align: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #e0e0e0; display: flex; flex-direction: column; justify-content: space-between; height: 140px; }
+        .card-producto { background: white; border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #e0e0e0; display: flex; flex-direction: column; justify-content: space-between; height: 190px; }
         .card-producto:active { transform: scale(0.97); }
-        .card-producto h4 { margin: 0 0 5px 0; font-size: 15px; color: #111111; }
-        .card-producto p { margin: 0; font-size: 13px; color: #666666; font-weight: 500; }
-        .card-producto .precio { margin-top: 10px; font-size: 16px; color: #111111; font-weight: bold; }
+        .img-producto { width: 100%; height: 85px; object-fit: cover; border-radius: 4px; margin-bottom: 8px; background: #f1f2f6; }
+        .card-producto h4 { margin: 0 0 3px 0; font-size: 13px; color: #111111; line-height: 1.2; }
+        .card-producto p { margin: 0; font-size: 11px; color: #666666; font-weight: 500; }
+        .card-producto .precio { margin-top: auto; font-size: 15px; color: #111111; font-weight: bold; }
 
         .panel-ticket { flex: 3.5; background: white; border-left: 1px solid #e0e0e0; display: flex; flex-direction: column; padding: 15px 20px; }
         
@@ -354,6 +355,7 @@
             renderizarProductos(categoriaId);
         }
 
+        
         function renderizarProductos(categoriaId) {
             const grid = document.getElementById('grid-productos');
             grid.innerHTML = ''; 
@@ -363,26 +365,51 @@
 
             if (filtrados.length === 0) return grid.innerHTML = '<h4>No hay productos.</h4>';
             
-            if (categoriaId === 6) {
+            // --- NUEVO: MOTOR INTELIGENTE DE IMÁGENES ---
+            const obtenerRutaImagen = (nombreImg) => {
+                if (!nombreImg) return 'https://placehold.co/150x100/eeeeee/999999?text=Sin+Foto';
+                // Si por alguna razón alguien sí escribió "img/" o pegó un link de internet, lo respeta
+                if (nombreImg.startsWith('http') || nombreImg.startsWith('img/')) return nombreImg;
+                // Si solo está el nombre (Ej: "bingsu.jpg"), le inyecta la carpeta automáticamente
+                return `img/${nombreImg}`; 
+            };
+
+            if (categoriaId === 6) { // CASO: K-MERCH
                 filtrados.forEach(prod => {
                     const btn = document.createElement('div');
                     btn.className = 'card-producto';
                     btn.onclick = () => abrirModalVariantesMerch(prod);
-                    btn.innerHTML = `<div><h4>${prod.nombre_producto}</h4><p style="color: #3498db; font-weight:bold;">Ver opciones</p></div><div class="precio"></div>`;
+                    
+                    const imgUrl = obtenerRutaImagen(prod.imagen);
+                    
+                    btn.innerHTML = `
+                        <img src="${imgUrl}" class="img-producto" onerror="this.src='https://placehold.co/150x100/eeeeee/999999?text=Error'">
+                        <div><h4>${prod.nombre_producto}</h4><p style="color: #3498db; font-weight:bold;">Ver opciones</p></div>
+                        <div class="precio"></div>
+                    `;
                     grid.appendChild(btn);
                 });
-            } else {
+            } else { // CASO: HELADOS Y BEBIDAS
                 filtrados.forEach(prod => {
                     if (!prod.producto_variantes) return;
+                    
+                    const imgUrl = obtenerRutaImagen(prod.imagen);
+                    
                     prod.producto_variantes.forEach(variante => {
                         const btn = document.createElement('div');
                         btn.className = 'card-producto';
+                        
                         if (categoriaId === 1 || categoriaId === 2) {
                             btn.onclick = () => abrirModalPersonalizacion(categoriaId, prod.id, variante.id, prod.nombre_producto, variante.nombre_variante, variante.precio);
                         } else {
                             btn.onclick = () => agregarAlCarrito(prod.id, variante.id, prod.nombre_producto, variante.nombre_variante, variante.precio, "");
                         }
-                        btn.innerHTML = `<div><h4>${prod.nombre_producto}</h4><p>${variante.nombre_variante}</p></div><div class="precio">$${variante.precio}</div>`;
+                        
+                        btn.innerHTML = `
+                            <img src="${imgUrl}" class="img-producto" onerror="this.src='https://placehold.co/150x100/eeeeee/999999?text=Error'">
+                            <div><h4>${prod.nombre_producto}</h4><p>${variante.nombre_variante}</p></div>
+                            <div class="precio">$${variante.precio}</div>
+                        `;
                         grid.appendChild(btn);
                     });
                 });
