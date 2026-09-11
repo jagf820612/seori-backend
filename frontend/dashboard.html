@@ -158,8 +158,8 @@
 
         async function cargarDashboard() {
             // Preparar las fechas para enviar al servidor (Agregamos horas para cubrir el día completo)
-            const fInicio = document.getElementById('fecha-inicio').value + "T00:00:00.000Z";
-            const fFin = document.getElementById('fecha-fin').value + "T23:59:59.999Z";
+            const fInicio = document.getElementById('fecha-inicio').value + "T00:00:00.000-05:00";
+            const fFin = document.getElementById('fecha-fin').value + "T23:59:59.999-05:00";
 
             try {
                 // Modifica esta URL con la tuya de Render
@@ -351,7 +351,7 @@
                 `;
             });
         }
-        
+
         // --- TABLA DE HISTORIAL CONSOLIDADO ---
         function llenarTablaConsolidados(ranking) {
             const tbody = document.getElementById('tabla-consolidados');
