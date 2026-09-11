@@ -95,6 +95,25 @@
         </div>
     </div>
 
+<!-- NUEVA ZONA: Historial Consolidado de Ventas -->
+    <div class="tabla-container" style="margin-bottom: 25px;">
+        <h3 style="margin-top:0;">📋 Historial Consolidado de Productos Vendidos</h3>
+        <div style="max-height: 300px; overflow-y: auto;">
+            <table>
+                <thead style="position: sticky; top: 0; background: #f8f9fa; z-index: 1;">
+                    <tr>
+                        <th>Producto (Variante)</th>
+                        <th style="text-align: center;">Cantidad Vendida</th>
+                        <th style="text-align: right;">Ingresos Generados</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-consolidados">
+                    <tr><td colspan="3" style="text-align:center;">Cargando historial...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- Zona de Inventario en Tiempo Real -->
     <div class="tabla-container">
         <h3 style="margin-top:0;">📦 Estado del Inventario (Stock)</h3>
@@ -167,6 +186,8 @@
                 dibujarGraficaPeorVentas(peores5);
                 dibujarGraficaHoras(data.ventasPorHora);
                 dibujarGraficaDias(data.ventasPorDia, fInicio, fFin);;
+                // Llenar el consolidado completo
+                llenarTablaConsolidados(data.rankingProductos);
 
                 // 3. Llenar Tabla de Inventario
                 llenarTablaInventario(data.inventario);
@@ -326,6 +347,28 @@
                         <td style="font-size:16px; font-weight:bold;">${item.stock_actual}</td>
                         <td style="color:#666;">${item.stock_minimo}</td>
                         <td>${estadoHtml}</td>
+                    </tr>
+                `;
+            });
+        }
+        
+        // --- TABLA DE HISTORIAL CONSOLIDADO ---
+        function llenarTablaConsolidados(ranking) {
+            const tbody = document.getElementById('tabla-consolidados');
+            tbody.innerHTML = '';
+
+            if(ranking.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 20px;">No se registraron ventas en este rango de fechas.</td></tr>';
+                return;
+            }
+
+            // El servidor ya nos manda la data agrupada y sumada, del más vendido al menos vendido.
+            ranking.forEach(item => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${item.nombre}</strong></td>
+                        <td style="text-align: center; font-size: 15px; font-weight: bold; background: #f1f2f6;">${item.cantidad}</td>
+                        <td style="text-align: right; color: #27ae60; font-weight: bold;">$${item.ingresos.toLocaleString('es-CO')}</td>
                     </tr>
                 `;
             });
