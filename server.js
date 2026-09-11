@@ -798,6 +798,8 @@ app.get('/api/reportes/dashboard', async (req, res) => {
         const { inicio, fin } = req.query; // Recibimos el rango de fechas
 
         // 1. OBTENER PEDIDOS EN EL RANGO DE FECHAS
+
+// 1. OBTENER PEDIDOS EN EL RANGO DE FECHAS
         const { data: pedidos, error: errPedidos } = await supabase
             .from('pedidos')
             .select(`
@@ -812,8 +814,7 @@ app.get('/api/reportes/dashboard', async (req, res) => {
             `)
             .gte('fecha_hora', inicio)
             .lte('fecha_hora', fin)
-            .eq('estado', 'Completado'); // Solo contamos ventas reales y cerradas
-        
+            .neq('estado', 'Cancelado'); // Toma Completado, Pendiente o En preparación; excluye únicamente anulados                    
         if (errPedidos) throw errPedidos;
 
         // Variables para las métricas
