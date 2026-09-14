@@ -34,11 +34,8 @@
 
         .panel-ticket { flex: 3.5; background: white; border-left: 1px solid #e0e0e0; display: flex; flex-direction: column; padding: 15px 20px; }
         
-        /* Ajuste de altura dinámica para la lista del ticket */
-        .lista-ticket { flex-grow: 1; overflow-y: auto; border-bottom: 2px dashed #eeeeee; margin-bottom: 10px; padding-right: 5px; display: flex; flex-direction: column; }
-        
-        .item-ticket { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #f8f9fa; flex-shrink: 0; }
-
+        .lista-ticket { flex: 1 1 0; /* Obliga al contenedor a tomar solo el espacio sobrante */overflow-y: auto; border-bottom: 2px dashed #eeeeee; margin-bottom: 10px; padding-right: 5px; display: block; /* Cambiamos flex por block para evitar que los hijos se encojan */}
+        .item-ticket { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid #f8f9fa; min-height: min-content; /* Previene que el texto se ampute verticalmente */}
 
         .item-info { flex: 1; }
         .item-info strong { display: block; font-size: 14px; color: #111111; }
@@ -48,7 +45,7 @@
         
         /* Zona de cobro más compacta */
         
-        .zona-cobro { text-align: right; margin-top: auto; flex-shrink: 0; }
+        .zona-cobro { flex: 0 0 auto; /* Bloquea la zona inferior para que nunca se encoja */text-align: right; }
         .total-texto { font-size: 18px; color: #333333; margin-bottom: 5px; }
         .total-monto { font-size: 26px; color: #111111; font-weight: bold; }
         .btn-cobrar { width: 100%; padding: 12px; background: #111111; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
