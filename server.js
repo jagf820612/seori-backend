@@ -92,13 +92,14 @@ app.get('/api/menu', async (req, res) => {
 });
 
 
-// --- RUTA INTEGRADA: Registrar venta, descontar stock, guardar observaciones y enviar a tablet ---
+// --- RUTA INTEGRADA: Registrar venta, descontar stock, guardar observaciones, fidelización y enviar a tablet ---
 app.post('/api/pedidos', async (req, res) => {
     try {
-        const { total, metodo_pago, detalles, turno_id, observaciones } = req.body;
+        // ---> FIDELIZACIÓN: Añadimos 'celular_cliente' para recibirlo desde el frontend
+        const { total, metodo_pago, detalles, turno_id, observaciones, celular_cliente } = req.body;
         const fecha_hora = new Date().toISOString();
 
-        // 1. Guardar el encabezado del pedido (AHORA INCLUYE OBSERVACIONES)
+        // 1. Guardar el encabezado del pedido
         const { data: pedido, error: errorPedido } = await supabase
             .from('pedidos')
             .insert([{
@@ -158,8 +159,10 @@ app.post('/api/pedidos', async (req, res) => {
                     }]);
             }
         }
+
         // 4. ¡FILTRO INTELIGENTE PARA LA TABLET (Ocultar Categoría 6 K-Merch)!
         let detallesParaCocina = [];
+        let soloKMerch = true; // ---> Ajuste descuadre K-Merch: verificaremos si TODO es K-Merch
 
         for (let item of detalles) {
             const { data: infoProd } = await supabase
@@ -168,18 +171,57 @@ app.post('/api/pedidos', async (req, res) => {
                 .eq('id', item.variante_id)
                 .single();
 
-            if (infoProd && infoProd.productos && infoProd.productos.categoria_id !== 6) {
-                detallesParaCocina.push(item);
+            if (infoProd && infoProd.productos) {
+                if (infoProd.productos.categoria_id !== 6) {
+                    detallesParaCocina.push(item);
+                    soloKMerch = false; // Hay productos que van a cocina
+                }
             }
+        }
+
+        // ---> Ajuste descuadre K-Merch: Si el pedido es SOLO K-Merch, se completa automáticamente
+        if (soloKMerch) {
+            await supabase
+                .from('pedidos')
+                .update({ estado: 'Completado' })
+                .eq('id', pedido.id);
         }
 
         // Si quedó al menos un producto de cocina, emitimos la orden filtrada a la tablet
         if (detallesParaCocina.length > 0) {
             io.emit('nuevo-pedido', { 
                 pedido_id: pedido.id, 
-                observaciones: pedido.observaciones, // Enviamos las observaciones en vivo
+                observaciones: pedido.observaciones, 
                 detalles: detallesParaCocina 
             });
+        }
+
+        // ---> FIDELIZACIÓN: Lógica de Registro y Acumulación de Stickers
+        if (celular_cliente && celular_cliente.trim() !== '') {
+            const celular = celular_cliente.trim();
+
+            // Consultar si el cliente ya existe
+            const { data: clienteExistente, error: errBusqueda } = await supabase
+                .from('clientes')
+                .select('cantidad_stickers')
+                .eq('celular', celular)
+                .single();
+
+            if (clienteExistente) {
+                // Cliente recurrente: Sumar 1 sticker
+                await supabase
+                    .from('clientes')
+                    .update({ cantidad_stickers: clienteExistente.cantidad_stickers + 1 })
+                    .eq('celular', celular);
+            } else {
+                // Cliente nuevo: Crear registro con 1 sticker
+                await supabase
+                    .from('clientes')
+                    .insert([{ 
+                        celular: celular, 
+                        cantidad_stickers: 1 
+                    }]);
+            }
         }
 
         // 5. Responder con éxito
@@ -893,6 +935,37 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'frontend', 'login.html'));
 });
 
+
+app.use(express.static(path.join(__dirname, 'frontend')));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'frontend', 'login.html'));
+});
+
+// --- RUTA: Consultar Stickers de un Cliente ---
+app.get('/api/clientes/:celular', async (req, res) => {
+    try {
+        const celular = req.params.celular;
+        
+        const { data: cliente, error } = await supabase
+            .from('clientes')
+            .select('nombre, cantidad_stickers')
+            .eq('celular', celular)
+            .single();
+
+        if (error || !cliente) {
+            // Si no existe, no es un error fatal, solo significa que tiene 0 stickers
+            return res.json({ existe: false, cantidad_stickers: 0, nombre: null });
+        }
+
+        res.json({ existe: true, cantidad_stickers: cliente.cantidad_stickers, nombre: cliente.nombre });
+    } catch (error) {
+        console.error("Error al consultar cliente:", error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// --- INICIO DEL SERVIDOR ---
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
     console.log(`🚀 Servidor y Tiempo Real corriendo a máxima velocidad en el puerto ${PORT}`);
