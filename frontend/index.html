@@ -37,7 +37,9 @@
         /* Ajuste de altura dinámica para la lista del ticket */
         .lista-ticket { flex-grow: 1; overflow-y: auto; border-bottom: 2px dashed #eeeeee; margin-bottom: 10px; padding-right: 5px; display: flex; flex-direction: column; }
         
-        .item-ticket { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #f8f9fa; }
+        .item-ticket { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #f8f9fa; flex-shrink: 0; }
+
+
         .item-info { flex: 1; }
         .item-info strong { display: block; font-size: 14px; color: #111111; }
         .item-info small { color: #666666; font-size: 12px; display: block; margin-top: 3px; }
@@ -45,7 +47,8 @@
         .btn-cant { background: #111111; color: white; border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-weight: bold; font-size: 12px; }
         
         /* Zona de cobro más compacta */
-        .zona-cobro { text-align: right; margin-top: auto; }
+        
+        .zona-cobro { text-align: right; margin-top: auto; flex-shrink: 0; }
         .total-texto { font-size: 18px; color: #333333; margin-bottom: 5px; }
         .total-monto { font-size: 26px; color: #111111; font-weight: bold; }
         .btn-cobrar { width: 100%; padding: 12px; background: #111111; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
@@ -132,16 +135,20 @@
                 </div>
 
                 <!-- INICIO: Módulo de Fidelización (Stickers) -->
-                <div class="fidelizacion-container" style="margin-top: 15px; padding: 12px; background: #e3f2fd; border-radius: 6px; border-left: 4px solid #3498db;">
-                    <label for="cliente-celular" style="font-size: 13px; font-weight: bold; color: #111;">
-                     📱 Celular Cliente (Fidelización)
-                    </label>
-                    <input type="text" id="cliente-celular" placeholder="Ej: 3001234567" maxlength="10" style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #bdc3c7; border-radius: 6px; font-size: 16px; font-weight: bold;">
-                    <small style="color: #555; font-size: 11px; display: block; margin-top: 4px;">
-                        * Opcional. Si es nuevo, se registrará automáticamente.
-                    </small>
-                </div>
+                
+                <!-- INICIO: Módulo de Fidelización (Stickers) COMPACTO -->
+                    <div class="fidelizacion-container" style="margin-top: 8px; margin-bottom: 8px; padding: 8px 12px; background: #e3f2fd; border-radius: 6px; border-left: 4px solid #3498db; text-align: left;">
+                     <label for="cliente-celular" style="font-size: 12px; font-weight: bold; color: #111;">
+                       📱 Celular Cliente (Fidelización)
+                     </label>
+                     <input type="text" id="cliente-celular" placeholder="Ej: 3001234567" maxlength="10" style="width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #bdc3c7; border-radius: 6px; font-size: 14px; font-weight: bold;">
+                        <small style="color: #555; font-size: 11px; display: block; margin-top: 4px;">
+                            * Opcional. Si es nuevo, se registrará automáticamente.
+                        </small>
+                     </div>
                 <!-- FIN: Módulo de Fidelización -->
+                
+                
 
                 <button class="btn-cobrar" onclick="procesarVenta()" id="btn-cobrar">Cobrar Venta</button>
             </div>
@@ -608,64 +615,8 @@
         }
 
         
-window.procesarVenta = async () => {
-            if (!carrito.length) return alert("Ticket vacío.");
-            
-            const metodo = document.getElementById('metodo_pago').value;
-            if (!metodo) return alert("⚠️ Por favor, selecciona con qué método van a pagar.");
 
-            const btn = document.getElementById('btn-cobrar'); 
-            btn.innerText = "Procesando..."; 
-            btn.disabled = true;
-            
-            const observaciones = document.getElementById('observaciones_pedido').value;
-            
-            // 1. NUEVO: Capturamos el celular del cliente (si escribió algo)
-            const celularCliente = document.getElementById('cliente-celular').value.trim();
-
-            const detalles = carrito.map(i => { return { variante_id: i.idVariante, cantidad: i.cantidad, subtotal: i.precio * i.cantidad, nombre: i.nombre, variante: i.variante, notas: i.notas }; });
-            
-            try {
-                const res = await fetch('https://seori-backend.onrender.com/api/pedidos', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    // 2. NUEVO: Enviamos el 'celular_cliente' en el paquete de datos al servidor
-                    body: JSON.stringify({ 
-                        turno_id: turnoActualId, 
-                        total: granTotalVenta, 
-                        metodo_pago: metodo, 
-                        observaciones: observaciones, 
-                        detalles: detalles,
-                        celular_cliente: celularCliente 
-                    }) 
-                });
-                
-                if(!res.ok) throw new Error();
-                const data = await res.json();
-                
-                imprimirTicket(carrito, granTotalVenta, metodo, data.pedido_id);
-                alert(`¡Venta cobrada! ($${granTotalVenta})`);
-                
-                // LIMPIEZA TOTAL PARA EL SIGUIENTE CLIENTE
-                carrito = []; 
-                actualizarTicket();
-                document.getElementById('observaciones_pedido').value = '';
-                document.getElementById('monto-recibido').value = '';
-                document.getElementById('metodo_pago').value = ''; 
-                // 3. NUEVO: Limpiamos la cajita del celular para el próximo cliente
-                document.getElementById('cliente-celular').value = ''; 
-
-                toggleCalculadoraVueltos(); 
-                calcularVueltos();
-
-            } catch (e) { 
-                alert("Error al cobrar."); 
-            } finally { 
-                btn.innerText = "Cobrar Venta"; 
-                btn.disabled = false; 
-            }
-        }
-
+        
 
         // --- FUNCIONES HISTORIAL ---
         window.abrirModalHistorial = function() { document.getElementById('modal-historial').style.display = 'flex'; cargarHistorialCaja(); }
