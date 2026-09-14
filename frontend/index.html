@@ -613,7 +613,59 @@
 
         
 
-        
+window.procesarVenta = async () => {
+            if (!carrito.length) return alert("Ticket vacío.");
+            
+            const metodo = document.getElementById('metodo_pago').value;
+            if (!metodo) return alert("⚠️ Por favor, selecciona con qué método van a pagar.");
+
+            const btn = document.getElementById('btn-cobrar'); 
+            btn.innerText = "Procesando..."; 
+            btn.disabled = true;
+            
+            const observaciones = document.getElementById('observaciones_pedido').value;
+            const celularCliente = document.getElementById('cliente-celular').value.trim();
+
+            const detalles = carrito.map(i => { return { variante_id: i.idVariante, cantidad: i.cantidad, subtotal: i.precio * i.cantidad, nombre: i.nombre, variante: i.variante, notas: i.notas }; });
+            
+            try {
+                const res = await fetch('https://seori-backend.onrender.com/api/pedidos', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ 
+                        turno_id: turnoActualId, 
+                        total: granTotalVenta, 
+                        metodo_pago: metodo, 
+                        observaciones: observaciones, 
+                        detalles: detalles,
+                        celular_cliente: celularCliente 
+                    }) 
+                });
+                
+                if(!res.ok) throw new Error();
+                const data = await res.json();
+                
+                imprimirTicket(carrito, granTotalVenta, metodo, data.pedido_id);
+                alert(`¡Venta cobrada! ($${granTotalVenta})`);
+                
+                // Limpieza post-venta
+                carrito = []; 
+                actualizarTicket();
+                document.getElementById('observaciones_pedido').value = '';
+                document.getElementById('monto-recibido').value = '';
+                document.getElementById('metodo_pago').value = ''; 
+                document.getElementById('cliente-celular').value = ''; 
+
+                toggleCalculadoraVueltos(); 
+                calcularVueltos();
+
+            } catch (e) { 
+                alert("Error al cobrar."); 
+            } finally { 
+                btn.innerText = "Cobrar Venta"; 
+                btn.disabled = false; 
+            }
+        }        
 
         // --- FUNCIONES HISTORIAL ---
         window.abrirModalHistorial = function() { document.getElementById('modal-historial').style.display = 'flex'; cargarHistorialCaja(); }
