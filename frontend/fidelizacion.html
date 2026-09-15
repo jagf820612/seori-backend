@@ -6,8 +6,13 @@
     <title>Seori Rewards 🌸</title>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { 
-            background-color: #fff0f5; /* Tono rosa pastel muy suave */
+       body { 
+            /* Agregamos la imagen de fondo */
+            background-image: url('img/fondo-seori.png');
+            background-size: cover; /* Para que cubra toda la pantalla */
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed; /* Para que no se mueva al hacer scroll */
             margin: 0; padding: 0; display: flex; flex-direction: column; 
             align-items: center; min-height: 100vh; color: #333;
         }
@@ -21,8 +26,12 @@
 
         .container { 
             width: 90%; max-width: 400px; margin-top: 30px; 
-            background: white; border-radius: 20px; padding: 30px 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center;
+            /* Efecto de vidrio esmerilado (Glassmorphism) */
+            background: rgba(255, 255, 255, 0.85); 
+            backdrop-filter: blur(8px); /* Desenfoca ligeramente lo que hay detrás */
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: 20px; padding: 30px 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center;
         }
 
         h2 { margin-top: 0; color: #ff6b81; font-size: 22px; }
