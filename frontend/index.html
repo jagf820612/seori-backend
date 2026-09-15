@@ -32,24 +32,38 @@
         .card-producto p { margin: 0; font-size: 11px; color: #666666; font-weight: 500; }
         .card-producto .precio { margin-top: auto; font-size: 15px; color: #111111; font-weight: bold; }
 
-        .panel-ticket { flex: 3.5; background: white; border-left: 1px solid #e0e0e0; display: flex; flex-direction: column; padding: 15px 20px; }
+        /* --- PANEL TICKET Y LISTA (NUEVA ESTRUCTURA COMPACTA) --- */
+        .panel-ticket { flex: 3.5; background: white; border-left: 1px solid #e0e0e0; display: flex; flex-direction: column; padding: 15px; height: 100%; overflow: hidden; }
         
-        .lista-ticket { flex: 1 1 0; /* Obliga al contenedor a tomar solo el espacio sobrante */overflow-y: auto; border-bottom: 2px dashed #eeeeee; margin-bottom: 10px; padding-right: 5px; display: block; /* Cambiamos flex por block para evitar que los hijos se encojan */}
-        .item-ticket { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid #f8f9fa; min-height: min-content; /* Previene que el texto se ampute verticalmente */}
-
+        .lista-ticket { flex: 1 1 0; overflow-y: auto; border-bottom: 2px dashed #eeeeee; margin-bottom: 10px; padding-right: 5px; }
+        .item-ticket { display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #f8f9fa; min-height: min-content; }
+        
         .item-info { flex: 1; }
         .item-info strong { display: block; font-size: 14px; color: #111111; }
         .item-info small { color: #666666; font-size: 12px; display: block; margin-top: 3px; }
         .item-controles { display: flex; align-items: center; gap: 8px; margin-top: 5px;}
         .btn-cant { background: #111111; color: white; border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-weight: bold; font-size: 12px; }
         
-        /* Zona de cobro más compacta */
+        /* --- ZONA DE COBRO OPTIMIZADA --- */
+        .zona-cobro { flex: 0 0 auto; display: flex; flex-direction: column; gap: 8px; }
+        .total-texto { font-size: 16px; color: #333333; }
+        .total-monto { font-size: 24px; color: #111111; font-weight: bold; }
         
-        .zona-cobro { flex: 0 0 auto; /* Bloquea la zona inferior para que nunca se encoja */text-align: right; }
-        .total-texto { font-size: 18px; color: #333333; margin-bottom: 5px; }
-        .total-monto { font-size: 26px; color: #111111; font-weight: bold; }
-        .btn-cobrar { width: 100%; padding: 12px; background: #111111; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        /* Elementos de formulario más pequeños */
+        .input-compacto { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #dcdde1; font-size: 13px; outline: none; font-family: inherit; }
+        
+        .btn-cobrar { width: 100%; padding: 12px; background: #111111; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 5px; transition: background 0.2s; }
         .btn-cobrar:hover { background: #333333; }
+
+        /* --- MÓDULO FIDELIZACIÓN Y LUPA --- */
+        .fidelizacion-container { background: #e3f2fd; border-radius: 6px; border-left: 4px solid #3498db; padding: 10px; }
+        .grupo-buscador { display: flex; gap: 6px; margin-top: 5px; }
+        .btn-lupa { background: #3498db; color: white; border: none; padding: 0 15px; border-radius: 6px; cursor: pointer; font-size: 16px; transition: 0.2s; }
+        .btn-lupa:hover { background: #2980b9; }
+        
+        .contenedor-premios { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #bdc3c7; }
+        .btn-premio { width: 100%; background: #ffc107; color: #333; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; margin-top: 4px; text-align: left; transition: 0.2s; }
+        .btn-premio:hover { background: #e0a800; }
 
         /* MODALES */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; }
@@ -99,53 +113,55 @@
         </div>
 
         <div class="panel-ticket">
-            <h3 style="margin-top: 0; text-align: center; border-bottom: 1px solid #eeeeee; padding-bottom: 5px; margin-bottom: 10px; font-size: 16px;">Ticket Actual <span id="label-turno" style="color:#666666; font-size:13px;"></span></h3>
+            <h3 style="margin-top: 0; text-align: center; border-bottom: 1px solid #eeeeee; padding-bottom: 5px; margin-bottom: 10px; font-size: 15px;">Ticket Actual <span id="label-turno" style="color:#666; font-size:12px;"></span></h3>
             
             <div class="lista-ticket" id="lista-ticket"></div>
             
-            <!-- DISEÑO COMPACTO PARA DEJAR MÁS ESPACIO AL CARRITO -->
+            <!-- ZONA DE COBRO OPTIMIZADA -->
             <div class="zona-cobro">
-                <div class="total-texto">Total: <span class="total-monto" id="total-monto">$0</span></div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span class="total-texto">Total:</span>
+                    <span class="total-monto" id="total-monto">$0</span>
+                </div>
                 
-                <textarea id="observaciones_pedido" placeholder="Observaciones (Ej: Para llevar...)" style="width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #dcdde1; font-family: inherit; resize: none; height: 42px; font-size: 13px; outline: none;"></textarea>
+                <textarea id="observaciones_pedido" class="input-compacto" placeholder="Observaciones (Ej: Para llevar...)" style="height: 35px; resize: none;"></textarea>
 
-                <select id="metodo_pago" style="width: 100%; padding: 8px; font-size: 14px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 10px;" onchange="toggleCalculadoraVueltos()">
+                <select id="metodo_pago" class="input-compacto" onchange="toggleCalculadoraVueltos()">
                     <option value="" disabled selected>-- Selecciona método de pago --</option>
                     <option value="Efectivo">💵 Efectivo</option>
                     <option value="QR">📱 QR Bold</option>
                     <option value="Transferencia">🏦 Transferencia</option>
                 </select>
 
-                <!-- CALCULADORA DE VUELTOS COMPACTA -->
-                <div id="calculadora-vueltos" style="background: #f1f2f6; padding: 10px 15px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #27ae60; display: block;">
+                <!-- CALCULADORA DE VUELTOS -->
+                <div id="calculadora-vueltos" style="background: #f1f2f6; padding: 8px 10px; border-radius: 6px; border-left: 4px solid #27ae60; display: none;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                        <label style="font-size: 13px; font-weight: bold; color: #555;">Paga con:</label>
-                        <div style="position: relative;">
-                            <span style="position: absolute; left: 10px; top: 6px; color: #555; font-weight: bold;">$</span>
-                            <input type="number" id="monto-recibido" placeholder="Ej: 50000" style="width: 120px; padding: 6px 6px 6px 20px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; font-weight: bold; text-align: right;" oninput="calcularVueltos()">
-                        </div>
+                        <label style="font-size: 12px; font-weight: bold; color: #555;">Paga con: $</label>
+                        <input type="number" id="monto-recibido" class="input-compacto" placeholder="50000" style="width: 100px; text-align: right;" oninput="calcularVueltos()">
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 14px; font-weight: bold; color: #555;">Cambio:</span>
-                        <span id="texto-vueltos" style="font-size: 20px; font-weight: bold; color: #111;">$0</span>
+                        <span style="font-size: 13px; font-weight: bold; color: #555;">Cambio:</span>
+                        <span id="texto-vueltos" style="font-size: 18px; font-weight: bold; color: #111;">$0</span>
                     </div>
                 </div>
 
-                <!-- INICIO: Módulo de Fidelización (Stickers) -->
-                
-                <!-- INICIO: Módulo de Fidelización (Stickers) COMPACTO -->
-                    <div class="fidelizacion-container" style="margin-top: 8px; margin-bottom: 8px; padding: 8px 12px; background: #e3f2fd; border-radius: 6px; border-left: 4px solid #3498db; text-align: left;">
-                     <label for="cliente-celular" style="font-size: 12px; font-weight: bold; color: #111;">
-                       📱 Celular Cliente (Fidelización)
-                     </label>
-                     <input type="text" id="cliente-celular" placeholder="Ej: 3001234567" maxlength="10" style="width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #bdc3c7; border-radius: 6px; font-size: 14px; font-weight: bold;">
-                        <small style="color: #555; font-size: 11px; display: block; margin-top: 4px;">
-                            * Opcional. Si es nuevo, se registrará automáticamente.
-                        </small>
-                     </div>
-                <!-- FIN: Módulo de Fidelización -->
-                
-                
+                <!-- MÓDULO FIDELIZACIÓN Y CANJE -->
+                <div class="fidelizacion-container">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label style="font-size: 12px; font-weight: bold; color: #111;">📱 Celular (Fidelización)</label>
+                        <span id="info-stickers" style="font-size: 11px; font-weight: bold; color: #27ae60; display: none;"></span>
+                    </div>
+                    
+                    <div class="grupo-buscador">
+                        <input type="text" id="cliente-celular" class="input-compacto" placeholder="Ej: 3001234567" maxlength="10">
+                        <button class="btn-lupa" onclick="buscarPremiosCliente()" id="btn-buscar-cliente">🔍</button>
+                    </div>
+
+                    <!-- AQUÍ APARECERÁN LOS PREMIOS SI EL CLIENTE TIENE PUNTOS -->
+                    <div id="contenedor-premios" class="contenedor-premios">
+                        <!-- Botones generados por JS -->
+                    </div>
+                </div>
 
                 <button class="btn-cobrar" onclick="procesarVenta()" id="btn-cobrar">Cobrar Venta</button>
             </div>
@@ -240,8 +256,7 @@
                 <h2 style="margin: 0; font-size: 20px; color: #111111;">🕒 Historial de Ventas (Hoy)</h2>
                 <button onclick="cerrarModalHistorial()" style="background: #e74c3c; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">Cerrar</button>
             </div>
-            <div id="contenido-historial" style="overflow-y: auto; flex-grow: 1;">
-            </div>
+            <div id="contenido-historial" style="overflow-y: auto; flex-grow: 1;"></div>
         </div>
     </div>
 
@@ -265,7 +280,7 @@
         let itemTemporal = null; 
         let merchTemporal = null; 
         let turnoActualId = null;
-        let granTotalVenta = 0; // VARIABLE MAESTRA PARA EVITAR EL NaN
+        let granTotalVenta = 0; 
 
         async function iniciarSistema() {
             try {
@@ -371,7 +386,6 @@
             renderizarProductos(categoriaId);
         }
 
-        
         function renderizarProductos(categoriaId) {
             const grid = document.getElementById('grid-productos');
             grid.innerHTML = ''; 
@@ -381,21 +395,17 @@
 
             if (filtrados.length === 0) return grid.innerHTML = '<h4>No hay productos.</h4>';
             
-            // --- NUEVO: MOTOR INTELIGENTE DE IMÁGENES ---
             const obtenerRutaImagen = (nombreImg) => {
                 if (!nombreImg) return 'https://placehold.co/150x100/eeeeee/999999?text=Sin+Foto';
-                // Si por alguna razón alguien sí escribió "img/" o pegó un link de internet, lo respeta
                 if (nombreImg.startsWith('http') || nombreImg.startsWith('img/')) return nombreImg;
-                // Si solo está el nombre (Ej: "bingsu.jpg"), le inyecta la carpeta automáticamente
                 return `img/${nombreImg}`; 
             };
 
-            if (categoriaId === 6) { // CASO: K-MERCH
+            if (categoriaId === 6) { 
                 filtrados.forEach(prod => {
                     const btn = document.createElement('div');
                     btn.className = 'card-producto';
                     btn.onclick = () => abrirModalVariantesMerch(prod);
-                    
                     const imgUrl = obtenerRutaImagen(prod.imagen);
                     
                     btn.innerHTML = `
@@ -405,10 +415,9 @@
                     `;
                     grid.appendChild(btn);
                 });
-            } else { // CASO: HELADOS Y BEBIDAS
+            } else { 
                 filtrados.forEach(prod => {
                     if (!prod.producto_variantes) return;
-                    
                     const imgUrl = obtenerRutaImagen(prod.imagen);
                     
                     prod.producto_variantes.forEach(variante => {
@@ -432,11 +441,9 @@
             }
         }
 
-        // --- MODAL K-MERCH ---
         window.abrirModalVariantesMerch = function(prod) {
             merchTemporal = prod;
             document.getElementById('modal-merch-nombre').innerText = prod.nombre_producto;
-            
             const contenedor = document.getElementById('modal-merch-lista-variantes');
             contenedor.innerHTML = '';
             
@@ -472,7 +479,6 @@
             cerrarModalMerch();
         }
 
-        // --- PERSONALIZACION ---
         function abrirModalPersonalizacion(categoriaId, idProducto, idVariante, nombreProd, nombreVar, precioBase) {
             itemTemporal = { idProducto, idVariante, nombreProd, nombreVar, precioBase, categoriaId };
             document.getElementById('modal-nombre').innerText = `${nombreProd} (${nombreVar})`;
@@ -567,7 +573,7 @@
                 lista.innerHTML += `<div class="item-ticket"><div class="item-info"><strong>${item.nombre}</strong><small>${item.notas ? `${item.variante} | ${item.notas}` : item.variante}</small></div><div style="display:flex; flex-direction:column; align-items:flex-end;"><div class="item-controles"><button class="btn-cant" onclick="cambiarCantidad(${i}, -1)">-</button><span style="font-weight: bold; width: 20px; text-align: center;">${item.cantidad}</span><button class="btn-cant" onclick="cambiarCantidad(${i}, 1)">+</button></div><div style="font-weight: bold; margin-top: 5px;">$${sub}</div></div></div>`;
             });
             
-            granTotalVenta = total; // ACTUALIZAMOS VARIABLE MAESTRA
+            granTotalVenta = total; 
             document.getElementById('total-monto').innerText = `$${total}`;
             
             if (document.getElementById('metodo_pago').value === 'Efectivo') {
@@ -575,9 +581,6 @@
             }
         }
 
-        // ==========================================
-        // --- CALCULADORA DE VUELTOS (CORREGIDA) ---
-        // ==========================================
         function toggleCalculadoraVueltos() {
             const metodo = document.getElementById('metodo_pago').value;
             const divCalculadora = document.getElementById('calculadora-vueltos');
@@ -600,7 +603,7 @@
             }
 
             const recibido = parseFloat(inputMonto);
-            const cambio = recibido - granTotalVenta; // AHORA ES A PRUEBA DE FALLOS
+            const cambio = recibido - granTotalVenta; 
 
             if (cambio < 0) {
                 textoVueltos.innerText = "Faltan $" + Math.abs(cambio).toLocaleString('es-CO');
@@ -611,9 +614,7 @@
             }
         }
 
-        
-
-window.procesarVenta = async () => {
+        window.procesarVenta = async () => {
             if (!carrito.length) return alert("Ticket vacío.");
             
             const metodo = document.getElementById('metodo_pago').value;
@@ -648,13 +649,14 @@ window.procesarVenta = async () => {
                 imprimirTicket(carrito, granTotalVenta, metodo, data.pedido_id);
                 alert(`¡Venta cobrada! ($${granTotalVenta})`);
                 
-                // Limpieza post-venta
                 carrito = []; 
                 actualizarTicket();
                 document.getElementById('observaciones_pedido').value = '';
                 document.getElementById('monto-recibido').value = '';
                 document.getElementById('metodo_pago').value = ''; 
                 document.getElementById('cliente-celular').value = ''; 
+                document.getElementById('info-stickers').style.display = 'none';
+                document.getElementById('contenedor-premios').style.display = 'none';
 
                 toggleCalculadoraVueltos(); 
                 calcularVueltos();
@@ -667,7 +669,6 @@ window.procesarVenta = async () => {
             }
         }        
 
-        // --- FUNCIONES HISTORIAL ---
         window.abrirModalHistorial = function() { document.getElementById('modal-historial').style.display = 'flex'; cargarHistorialCaja(); }
         window.cerrarModalHistorial = function() { document.getElementById('modal-historial').style.display = 'none'; }
 
@@ -690,7 +691,6 @@ window.procesarVenta = async () => {
             } catch (error) { contenedor.innerHTML = '<p style="text-align: center; color: red;">Error al cargar el historial.</p>'; }
         }
 
-        // --- IMPRIMIR ---
         function imprimirTicket(carritoAImprimir, totalPagar, metodoPago, numeroPedido) {
             const ventana = window.open('', '_blank', 'width=400,height=600');
             if (!ventana) return alert("⚠️ Chrome bloqueó el ticket. Por favor, mira arriba a la derecha en la barra de direcciones y permite las ventanas emergentes.");
@@ -702,7 +702,6 @@ window.procesarVenta = async () => {
             ventana.document.write(html); ventana.document.close();
         }
 
-        // --- LECTOR CODIGO DE BARRAS ---
         let codigoEscaneado = ''; let timerLector = null;
         document.addEventListener('keypress', (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -729,6 +728,12 @@ window.procesarVenta = async () => {
                     audio.volume = 0.3; audio.play().catch(e=>console.log("Audio omitido"));
                 }
             } catch (error) { console.error("Error al escanear código:", error); }
+        }
+
+        // --- FUNCIÓN TEMPORAL (LUPA FIDELIZACIÓN) ---
+        window.buscarPremiosCliente = function() {
+            // Esta función cobrará vida cuando creemos la ruta en tu backend.
+            alert("Pronto la lupa buscará los premios del cliente en tu base de datos.");
         }
         
         iniciarSistema();
