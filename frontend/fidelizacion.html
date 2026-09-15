@@ -3,61 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Seori Rewards 🌸</title>
+    <title>Seori Rewards</title>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-       body { 
-            /* Agregamos la imagen de fondo */
+        
+        body { 
+            /* Se asume que la imagen está en la carpeta img y se respetan los espacios en el nombre */
             background-image: url('img/fondo-seori.png');
-            background-size: cover; /* Para que cubra toda la pantalla */
+            background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            background-attachment: fixed; /* Para que no se mueva al hacer scroll */
+            background-attachment: fixed;
             margin: 0; padding: 0; display: flex; flex-direction: column; 
-            align-items: center; min-height: 100vh; color: #333;
-        }
-        
-        .header { 
-            width: 100%; background: #ffb6c1; padding: 20px; 
-            text-align: center; color: white; font-weight: bold; font-size: 24px;
-            border-bottom-left-radius: 25px; border-bottom-right-radius: 25px;
-            box-shadow: 0 4px 10px rgba(255, 182, 193, 0.4);
+            align-items: center; justify-content: center; min-height: 100vh; color: #111111;
         }
 
         .container { 
-            width: 90%; max-width: 400px; margin-top: 30px; 
-            /* Efecto de vidrio esmerilado (Glassmorphism) */
-            background: rgba(255, 255, 255, 0.85); 
-            backdrop-filter: blur(8px); /* Desenfoca ligeramente lo que hay detrás */
-            -webkit-backdrop-filter: blur(8px);
-            border-radius: 20px; padding: 30px 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center;
+            width: 90%; max-width: 400px; 
+            /* Estilo caja POS: Blanco con leve transparencia para lucir el fondo */
+            background: rgba(255, 255, 255, 0.93); 
+            backdrop-filter: blur(6px); 
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 8px; 
+            padding: 35px 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+            text-align: center;
+            border: 1px solid #e0e0e0;
         }
 
-        h2 { margin-top: 0; color: #ff6b81; font-size: 22px; }
-        p { color: #666; font-size: 14px; margin-bottom: 25px; line-height: 1.5; }
+        .logo-seori {
+            width: 140px;
+            margin-bottom: 20px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        h2 { margin-top: 0; color: #111111; font-size: 22px; font-weight: bold; }
+        p { color: #555555; font-size: 14px; margin-bottom: 25px; line-height: 1.5; }
 
         /* SECCIÓN LOGIN */
         #login-section { display: block; }
         .input-celular { 
-            width: 100%; padding: 15px; border: 2px solid #ffe4e1; 
-            border-radius: 12px; font-size: 18px; text-align: center;
-            font-weight: bold; color: #333; outline: none; transition: 0.3s;
+            width: 100%; padding: 12px; border: 1px solid #bdc3c7; 
+            border-radius: 6px; font-size: 18px; text-align: center;
+            font-weight: bold; color: #111111; outline: none; transition: 0.2s;
         }
-        .input-celular:focus { border-color: #ffb6c1; }
+        .input-celular:focus { border-color: #111111; }
+        
         .btn-ingresar { 
-            width: 100%; background: #ff6b81; color: white; border: none; 
-            padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold;
-            margin-top: 15px; cursor: pointer; transition: 0.3s;
+            width: 100%; background: #111111; color: white; border: none; 
+            padding: 14px; border-radius: 6px; font-size: 15px; font-weight: bold;
+            margin-top: 15px; cursor: pointer; transition: background 0.2s;
         }
-        .btn-ingresar:active { transform: scale(0.95); background: #ff4757; }
+        .btn-ingresar:hover { background: #333333; }
+        .btn-ingresar:active { transform: scale(0.98); }
 
-        /* SECCIÓN RECOMPENSAS (Oculta al inicio) */
+        /* SECCIÓN RECOMPENSAS */
         #rewards-section { display: none; }
         
         .sticker-card {
-            background: #f8f9fa; border: 2px dashed #ffb6c1; 
-            border-radius: 15px; padding: 20px; margin-top: 20px;
+            background: #f8f9fa; border: 1px solid #dcdde1; 
+            border-radius: 8px; padding: 20px; margin-top: 20px;
         }
         
         .grid-stickers { 
@@ -67,12 +74,14 @@
 
         .circulo-sticker {
             width: 100%; aspect-ratio: 1; border-radius: 50%;
-            background: #eee; display: flex; justify-content: center; 
-            align-items: center; font-size: 24px; transition: 0.5s;
+            background: #eeeeee; display: flex; justify-content: center; 
+            align-items: center; font-size: 20px; transition: 0.5s;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
         }
         
         .circulo-sticker.lleno { 
-            background: #ffe4e1; animation: pop 0.3s ease-in-out; 
+            background: #111111; color: white; animation: pop 0.3s ease-in-out; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
 
         @keyframes pop {
@@ -81,24 +90,23 @@
             100% { transform: scale(1); }
         }
 
-        .meta-texto { font-weight: bold; color: #ff6b81; margin-top: 15px; font-size: 15px;}
+        .meta-texto { font-weight: bold; color: #111111; margin-top: 15px; font-size: 15px;}
         
         .btn-volver { 
-            background: transparent; color: #999; border: none; 
-            margin-top: 20px; text-decoration: underline; cursor: pointer;
+            background: transparent; color: #666666; border: none; 
+            margin-top: 20px; text-decoration: underline; cursor: pointer; font-size: 14px;
         }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        🍧 Seori Rewards
-    </div>
-
     <div class="container">
+        <!-- Logo cargado directamente desde tu backend -->
+        <img src="https://seori-backend.onrender.com/img/logo-seori.png" alt="Seori Logo" class="logo-seori">
+
         <!-- PANTALLA 1: INGRESO -->
         <div id="login-section">
-            <h2>¡Bienvenido! 🎎</h2>
+            <h2>Fidelización</h2>
             <p>Ingresa tu número de celular para ver cuántos stickers has acumulado en tus visitas.</p>
             <input type="tel" id="input-cel" class="input-celular" placeholder="Ej: 3001234567" maxlength="10">
             <button class="btn-ingresar" onclick="consultarStickers()" id="btn-login">Ver mi cartón</button>
@@ -106,13 +114,13 @@
 
         <!-- PANTALLA 2: CARTÓN DE STICKERS -->
         <div id="rewards-section">
-            <h2 id="saludo-cliente">¡Hola! 🌸</h2>
+            <h2 id="saludo-cliente">¡Hola!</h2>
             <p>Por cada compra en caja, sumas un sticker. ¡Completa tu cartón y canjea premios!</p>
             
             <div class="sticker-card">
                 <div style="font-weight: bold; color: #555;">Tu Cartón Virtual</div>
                 <div class="grid-stickers" id="grid-stickers">
-                    <!-- Los stickers se generan con Javascript -->
+                    <!-- Generado por JS -->
                 </div>
                 <div class="meta-texto" id="texto-progreso">Tienes 0 de 10 stickers</div>
             </div>
@@ -122,7 +130,7 @@
     </div>
 
     <script>
-        const META_STICKERS = 10; // Espacios totales en el cartón
+        const META_STICKERS = 10; 
 
         async function consultarStickers() {
             const celular = document.getElementById('input-cel').value.trim();
@@ -132,7 +140,6 @@
             btn.innerText = "Buscando..."; btn.disabled = true;
 
             try {
-                // MODIFICA ESTA URL CON LA DE TU BACKEND EN RENDER
                 const res = await fetch(`https://seori-backend.onrender.com/api/clientes/${celular}`);
                 const data = await res.json();
 
@@ -149,9 +156,9 @@
             document.getElementById('rewards-section').style.display = 'block';
 
             if(nombre) {
-                document.getElementById('saludo-cliente').innerText = `¡Hola, ${nombre}! 🌸`;
+                document.getElementById('saludo-cliente').innerText = `¡Hola, ${nombre}!`;
             } else {
-                document.getElementById('saludo-cliente').innerText = `¡Hola! 🌸`;
+                document.getElementById('saludo-cliente').innerText = `¡Hola!`;
             }
 
             document.getElementById('texto-progreso').innerText = `Tienes ${cantidad} de ${META_STICKERS} stickers`;
@@ -159,17 +166,15 @@
             const grid = document.getElementById('grid-stickers');
             grid.innerHTML = '';
 
-            // Dibujar los 10 circulitos
             for(let i = 1; i <= META_STICKERS; i++) {
                 const circulo = document.createElement('div');
                 circulo.className = 'circulo-sticker';
                 
-                // Si el número de sticker actual es menor o igual a la cantidad que tiene el cliente
                 if(i <= cantidad) {
                     circulo.classList.add('lleno');
-                    circulo.innerText = '🍧'; // Emoji de Bingsu cuando está lleno
+                    circulo.innerText = '🍧'; 
                 } else {
-                    circulo.innerText = '⚪'; // Circulo gris vacío
+                    circulo.innerText = ''; 
                 }
                 
                 grid.appendChild(circulo);
