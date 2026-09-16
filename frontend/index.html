@@ -614,20 +614,23 @@
             }
         }
 
+        // --- PROCESAR VENTA (MODIFICADO PARA ENVIAR PREMIOS) ---
         window.procesarVenta = async () => {
             if (!carrito.length) return alert("Ticket vacío.");
             
-            const metodo = document.getElementById('metodo_pago').value;
-            if (!metodo) return alert("⚠️ Por favor, selecciona con qué método van a pagar.");
+            let metodo = document.getElementById('metodo_pago').value;
+            // Si el total es 0 (solo lleva el premio), forzamos el método para que no bloquee la venta
+            if (!metodo && granTotalVenta === 0) metodo = "Efectivo"; 
+            if (!metodo) return alert("⚠️ Selecciona el método de pago.");
 
             const btn = document.getElementById('btn-cobrar'); 
-            btn.innerText = "Procesando..."; 
-            btn.disabled = true;
+            btn.innerText = "Procesando..."; btn.disabled = true;
             
-            const observaciones = document.getElementById('observaciones_pedido').value;
             const celularCliente = document.getElementById('cliente-celular').value.trim();
 
-            const detalles = carrito.map(i => { return { variante_id: i.idVariante, cantidad: i.cantidad, subtotal: i.precio * i.cantidad, nombre: i.nombre, variante: i.variante, notas: i.notas }; });
+            // Separamos productos normales y premios para que el backend no se confunda
+            const detallesBackend = carrito.map(i => { return { variante_id: i.idVariante, cantidad: i.cantidad, subtotal: i.precio * i.cantidad, nombre: i.nombre, variante: i.variante, notas: i.notas }; });
+            const premiosCanjeados = carrito.filter(i => i.isPremio).map(i => ({ premio_id: i.premio_id, costo_stickers: i.costo_stickers }));
             
             try {
                 const res = await fetch('https://seori-backend.onrender.com/api/pedidos', { 
@@ -637,9 +640,10 @@
                         turno_id: turnoActualId, 
                         total: granTotalVenta, 
                         metodo_pago: metodo, 
-                        observaciones: observaciones, 
-                        detalles: detalles,
-                        celular_cliente: celularCliente 
+                        observaciones: document.getElementById('observaciones_pedido').value, 
+                        detalles: detallesBackend,
+                        celular_cliente: celularCliente,
+                        premios_canjeados: premiosCanjeados // Enviamos la factura de los stickers a cobrar
                     }) 
                 });
                 
@@ -647,27 +651,19 @@
                 const data = await res.json();
                 
                 imprimirTicket(carrito, granTotalVenta, metodo, data.pedido_id);
-                alert(`¡Venta cobrada! ($${granTotalVenta})`);
                 
-                carrito = []; 
-                actualizarTicket();
+                // Limpieza total
+                carrito = []; actualizarTicket();
                 document.getElementById('observaciones_pedido').value = '';
                 document.getElementById('monto-recibido').value = '';
                 document.getElementById('metodo_pago').value = ''; 
                 document.getElementById('cliente-celular').value = ''; 
                 document.getElementById('info-stickers').style.display = 'none';
                 document.getElementById('contenedor-premios').style.display = 'none';
-
-                toggleCalculadoraVueltos(); 
-                calcularVueltos();
-
-            } catch (e) { 
-                alert("Error al cobrar."); 
-            } finally { 
-                btn.innerText = "Cobrar Venta"; 
-                btn.disabled = false; 
-            }
-        }        
+                toggleCalculadoraVueltos(); calcularVueltos();
+            } catch (e) { alert("Error al cobrar."); } 
+            finally { btn.innerText = "Cobrar Venta"; btn.disabled = false; }
+        }       
 
         window.abrirModalHistorial = function() { document.getElementById('modal-historial').style.display = 'flex'; cargarHistorialCaja(); }
         window.cerrarModalHistorial = function() { document.getElementById('modal-historial').style.display = 'none'; }
@@ -730,10 +726,62 @@
             } catch (error) { console.error("Error al escanear código:", error); }
         }
 
-        // --- FUNCIÓN TEMPORAL (LUPA FIDELIZACIÓN) ---
-        window.buscarPremiosCliente = function() {
-            // Esta función cobrará vida cuando creemos la ruta en tu backend.
-            alert("Pronto la lupa buscará los premios del cliente en tu base de datos.");
+        // --- MAGIA DE LA LUPA: Buscar y mostrar premios ---
+        window.buscarPremiosCliente = async function() {
+            const celular = document.getElementById('cliente-celular').value.trim();
+            const btn = document.getElementById('btn-buscar-cliente');
+            const infoStickers = document.getElementById('info-stickers');
+            const contenedorPremios = document.getElementById('contenedor-premios');
+
+            if(celular.length < 10) return alert("⚠️ Digita un celular válido de 10 números.");
+
+            btn.innerText = "⏳"; btn.disabled = true;
+
+            try {
+                const res = await fetch(`https://seori-backend.onrender.com/api/clientes/${celular}/premios-disponibles`);
+                const data = await res.json();
+
+                infoStickers.innerText = `⭐ ${data.stickers} stickers`;
+                infoStickers.style.display = 'block';
+                contenedorPremios.innerHTML = '';
+                
+                if (data.premios && data.premios.length > 0) {
+                    data.premios.forEach(premio => {
+                        const btnPremio = document.createElement('button');
+                        btnPremio.className = 'btn-premio';
+                        btnPremio.innerText = `🎁 Canjear: ${premio.nombre_premio} (-${premio.costo_stickers} pts)`;
+                        btnPremio.onclick = () => aplicarPremioAlTicket(premio);
+                        contenedorPremios.appendChild(btnPremio);
+                    });
+                    contenedorPremios.style.display = 'block';
+                } else {
+                    contenedorPremios.style.display = 'none';
+                    if(data.stickers === 0) alert("Cliente nuevo o con 0 stickers.");
+                    else alert(`Tiene ${data.stickers} stickers, pero aún no le alcanzan para ningún premio.`);
+                }
+            } catch(e) {
+                alert("Error al consultar la base de datos.");
+            } finally {
+                btn.innerText = "🔍"; btn.disabled = false;
+            }
+        }
+
+        // --- AGREGAR EL PREMIO AL TICKET A COSTO $0 ---
+        window.aplicarPremioAlTicket = function(premio) {
+            carrito.push({
+                idProducto: null, 
+                idVariante: premio.variante_id_referencia, 
+                nombre: "🎁 PREMIO FIDELIZACIÓN", 
+                variante: premio.nombre_premio, 
+                precio: 0, // ¡Gratis!
+                cantidad: 1, 
+                notas: `Costo: ${premio.costo_stickers} stickers`,
+                isPremio: true,
+                premio_id: premio.id,
+                costo_stickers: premio.costo_stickers
+            });
+            actualizarTicket();
+            document.getElementById('contenedor-premios').style.display = 'none'; 
         }
         
         iniciarSistema();
