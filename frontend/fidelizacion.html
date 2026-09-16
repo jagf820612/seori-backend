@@ -8,7 +8,6 @@
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         
         body { 
-            /* Se asume que la imagen está en la carpeta img y se respetan los espacios en el nombre */
             background-image: url('img/fondo-seori.png');
             background-size: cover;
             background-position: center;
@@ -20,7 +19,6 @@
 
         .container { 
             width: 90%; max-width: 400px; 
-            /* Estilo caja POS: Blanco con leve transparencia para lucir el fondo */
             background: rgba(255, 255, 255, 0.93); 
             backdrop-filter: blur(6px); 
             -webkit-backdrop-filter: blur(6px);
@@ -59,30 +57,25 @@
         .btn-ingresar:hover { background: #333333; }
         .btn-ingresar:active { transform: scale(0.98); }
 
-        /* SECCIÓN RECOMPENSAS */
+        /* SECCIÓN RECOMPENSAS Y PERFIL */
         #rewards-section { display: none; }
         
-        .sticker-card {
-            background: #f8f9fa; border: 1px solid #dcdde1; 
-            border-radius: 8px; padding: 20px; margin-top: 20px;
-        }
-        
-        .grid-stickers { 
-            display: grid; grid-template-columns: repeat(5, 1fr); 
-            gap: 12px; margin-top: 15px;
-        }
+        /* Estilos del Perfil */
+        .perfil-box { background: rgba(255,255,255,0.6); padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: left; border: 1px solid #e0e0e0; }
+        .perfil-label { font-size: 12px; font-weight: bold; color: #555; display: block; margin-bottom: 5px; }
+        .input-perfil { width: 100%; padding: 10px; border: 1px solid #bdc3c7; border-radius: 6px; font-size: 14px; margin-bottom: 12px; outline: none; font-family: inherit; }
+        .btn-guardar { width: 100%; background: #27ae60; color: white; border: none; padding: 10px; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-guardar:hover { background: #219653; }
 
-        .circulo-sticker {
-            width: 100%; aspect-ratio: 1; border-radius: 50%;
-            background: #eeeeee; display: flex; justify-content: center; 
-            align-items: center; font-size: 20px; transition: 0.5s;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
-        }
+        /* Estilos del Cartón */
+        .sticker-card { background: #f8f9fa; border: 1px solid #dcdde1; border-radius: 8px; padding: 20px; }
+        .grid-stickers { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 15px; }
+        .circulo-sticker { width: 100%; aspect-ratio: 1; border-radius: 50%; background: #eeeeee; display: flex; justify-content: center; align-items: center; font-size: 20px; transition: 0.5s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+        .circulo-sticker.lleno { background: #111111; color: white; animation: pop 0.3s ease-in-out; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        .meta-texto { font-weight: bold; color: #111111; margin-top: 15px; font-size: 15px;}
         
-        .circulo-sticker.lleno { 
-            background: #111111; color: white; animation: pop 0.3s ease-in-out; 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
+        /* Estilos de la lista de premios */
+        .premio-item { background: #111111; color: white; padding: 12px 15px; border-radius: 6px; margin-bottom: 8px; font-size: 14px; font-weight: bold; text-align: left; display: flex; justify-content: space-between; align-items: center; }
 
         @keyframes pop {
             0% { transform: scale(0.8); }
@@ -90,19 +83,14 @@
             100% { transform: scale(1); }
         }
 
-        .meta-texto { font-weight: bold; color: #111111; margin-top: 15px; font-size: 15px;}
-        
-        .btn-volver { 
-            background: transparent; color: #666666; border: none; 
-            margin-top: 20px; text-decoration: underline; cursor: pointer; font-size: 14px;
-        }
+        .btn-volver { background: transparent; color: #666666; border: none; margin-top: 25px; text-decoration: underline; cursor: pointer; font-size: 14px; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <!-- Logo cargado directamente desde tu backend -->
-        <img src="https://seori-backend.onrender.com/img/logo-seori.png" alt="Seori Logo" class="logo-seori">
+        <!-- Logo cargado directamente desde el backend -->
+        <img src="https://seori-backend.onrender.com/img/logo-seori.png" alt="Seori Logo" class="logo-seori" onerror="this.style.display='none'">
 
         <!-- PANTALLA 1: INGRESO -->
         <div id="login-section">
@@ -112,11 +100,28 @@
             <button class="btn-ingresar" onclick="consultarStickers()" id="btn-login">Ver mi cartón</button>
         </div>
 
-        <!-- PANTALLA 2: CARTÓN DE STICKERS -->
+        <!-- PANTALLA 2: PERFIL, CARTÓN Y PREMIOS -->
         <div id="rewards-section">
-            <h2 id="saludo-cliente">¡Hola!</h2>
-            <p>Por cada compra en caja, sumas un sticker. ¡Completa tu cartón y canjea premios!</p>
+            <h2 id="saludo-cliente" style="margin-bottom: 20px;">¡Hola!</h2>
             
+           <!-- CAJA DE DATOS DEL PERFIL -->
+            <div class="perfil-box">
+                <!-- INICIO: Banner de recompensa -->
+                <div id="banner-recompensa" style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 6px; font-size: 13px; font-weight: bold; text-align: center; margin-bottom: 15px; border: 1px dashed #ffe8a1; display: none;">
+                    🎁 ¡Completa tus datos por primera vez y gana 1 sticker gratis!
+                </div>
+                <!-- FIN: Banner de recompensa -->
+                
+                <label class="perfil-label">Tu Nombre:</label>
+                <input type="text" id="perfil-nombre" class="input-perfil" placeholder="Ej: Camila">
+                
+                <label class="perfil-label">Fecha de Nacimiento:</label>
+                <input type="date" id="perfil-fecha" class="input-perfil">
+                
+                <button onclick="guardarPerfil()" class="btn-guardar" id="btn-guardar">Guardar Mis Datos</button>
+            </div>
+            
+            <!-- CAJA DEL CARTÓN DE STICKERS -->
             <div class="sticker-card">
                 <div style="font-weight: bold; color: #555;">Tu Cartón Virtual</div>
                 <div class="grid-stickers" id="grid-stickers">
@@ -124,6 +129,9 @@
                 </div>
                 <div class="meta-texto" id="texto-progreso">Tienes 0 de 10 stickers</div>
             </div>
+
+            <!-- CAJA DE PREMIOS DISPONIBLES -->
+            <div id="lista-premios" style="margin-top: 20px;"></div>
 
             <button class="btn-volver" onclick="salir()">Salir / Buscar otro número</button>
         </div>
@@ -140,29 +148,41 @@
             btn.innerText = "Buscando..."; btn.disabled = true;
 
             try {
-                const res = await fetch(`https://seori-backend.onrender.com/api/clientes/${celular}`);
+                // LLamamos a la nueva ruta /perfil de tu servidor
+                const res = await fetch(`https://seori-backend.onrender.com/api/clientes/${celular}/perfil`);
                 const data = await res.json();
 
-                mostrarCarton(data.cantidad_stickers, data.nombre);
+                if (data.existe) {
+                    mostrarCarton(data);
+                } else {
+                    alert("Este número aún no está registrado. ¡Haz tu primera compra en caja para ganar tu primer sticker y activar tu cuenta!");
+                    btn.innerText = "Ver mi cartón"; btn.disabled = false;
+                }
             } catch (error) {
                 alert("Error al conectar con Seori. Intenta de nuevo.");
-            } finally {
                 btn.innerText = "Ver mi cartón"; btn.disabled = false;
             }
         }
 
-        function mostrarCarton(cantidad, nombre) {
+       function mostrarCarton(data) {
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('rewards-section').style.display = 'block';
 
-            if(nombre) {
-                document.getElementById('saludo-cliente').innerText = `¡Hola, ${nombre}!`;
+            // 1. Mostrar nombre y rellenar formulario
+            document.getElementById('saludo-cliente').innerText = data.nombre ? `¡Hola, ${data.nombre}!` : `¡Hola!`;
+            document.getElementById('perfil-nombre').value = data.nombre || '';
+            document.getElementById('perfil-fecha').value = data.fecha_nacimiento || '';
+
+            // --- NUEVO: Controlar si se muestra el banner de recompensa ---
+            if (!data.nombre) {
+                document.getElementById('banner-recompensa').style.display = 'block';
             } else {
-                document.getElementById('saludo-cliente').innerText = `¡Hola!`;
+                document.getElementById('banner-recompensa').style.display = 'none';
             }
+            // --------------------------------------------------------------
 
-            document.getElementById('texto-progreso').innerText = `Tienes ${cantidad} de ${META_STICKERS} stickers`;
-
+            // 2. Dibujar los stickers
+            document.getElementById('texto-progreso').innerText = `Tienes ${data.cantidad_stickers} de ${META_STICKERS} stickers`;
             const grid = document.getElementById('grid-stickers');
             grid.innerHTML = '';
 
@@ -170,14 +190,66 @@
                 const circulo = document.createElement('div');
                 circulo.className = 'circulo-sticker';
                 
-                if(i <= cantidad) {
+                if(i <= data.cantidad_stickers) {
                     circulo.classList.add('lleno');
                     circulo.innerText = '🍧'; 
+                }
+                grid.appendChild(circulo);
+            }
+
+            // 3. Mostrar los premios alcanzados
+            const lista = document.getElementById('lista-premios');
+            if(data.premios && data.premios.length > 0) {
+                let htmlPremios = '<h4 style="margin: 0 0 10px 0; color: #111; text-align: left; font-size: 14px;">🎁 Premios listos para canjear:</h4>';
+                data.premios.forEach(p => {
+                    htmlPremios += `<div class="premio-item"><span>${p.nombre}</span><span style="color: #ffcc00; font-weight: 800;">-${p.costos} pts</span></div>`;
+                });
+                lista.innerHTML = htmlPremios;
+            } else {
+                lista.innerHTML = '<p style="font-size: 13px; color: #666666; text-align: center; margin-top: 15px;">Aún no tienes stickers suficientes para canjear un premio. ¡Sigue disfrutando Seori!</p>';
+            }
+
+            document.getElementById('btn-login').innerText = "Ver mi cartón"; 
+            document.getElementById('btn-login').disabled = false;
+        }
+
+       async function guardarPerfil() {
+            const celular = document.getElementById('input-cel').value.trim();
+            const nombre = document.getElementById('perfil-nombre').value.trim();
+            const fecha = document.getElementById('perfil-fecha').value;
+            
+            const btn = document.getElementById('btn-guardar');
+            
+            // Validación para obligar al cliente a poner su nombre
+            if (!nombre) {
+                return alert("¡Oye! Por favor ingresa tu nombre para poder guardar tus datos.");
+            }
+
+            btn.innerText = "Guardando..."; btn.disabled = true;
+
+            try {
+                const response = await fetch(`https://seori-backend.onrender.com/api/clientes/${celular}`, {
+                    method: 'PUT', 
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ nombre: nombre, fecha_nacimiento: fecha })
+                });
+                
+                const data = await response.json();
+                
+                // Mensaje dinámico dependiendo de si ganaron la recompensa
+                if (data.ganoSticker) {
+                    alert("¡Felicidades! 🎉 Te hemos regalado 1 STICKER por completar tus datos.");
                 } else {
-                    circulo.innerText = ''; 
+                    alert("¡Tus datos han sido actualizados exitosamente!");
                 }
                 
-                grid.appendChild(circulo);
+                // Refrescamos la pantalla para que aparezca el nuevo sticker de inmediato
+                consultarStickers();
+                
+            } catch (error) {
+                alert("Error al guardar los datos. Intenta de nuevo.");
+            } finally {
+                btn.innerText = "Guardar Mis Datos"; btn.disabled = false;
             }
         }
 
