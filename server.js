@@ -1041,6 +1041,70 @@ app.get('/api/clientes/:celular/premios-disponibles', async (req, res) => {
     }
 });
 
+// --- RUTA: Consultar Perfil y Premios del Cliente ---
+app.get('/api/clientes/:celular/perfil', async (req, res) => {
+    try {
+        const celular = req.params.celular;
+        const { data: cliente } = await supabase.from('clientes')
+            .select('nombre, fecha_nacimiento, cantidad_stickers')
+            .eq('celular', celular).single();
+
+        if (!cliente) return res.json({ existe: false });
+
+        const { data: premios } = await supabase.from('premios_fidelizacion')
+            .select('costo_stickers, producto_variantes(nombre_variante, productos(nombre_producto))')
+            .eq('estado', true).lte('costo_stickers', cliente.cantidad_stickers);
+
+        const premiosFormateados = (premios || []).map(p => ({
+            costos: p.costo_stickers,
+            nombre: `${p.producto_variantes.productos.nombre_producto} (${p.producto_variantes.nombre_variante})`
+        }));
+
+        res.json({ existe: true, ...cliente, premios: premiosFormateados });
+    } catch (error) { res.status(500).json({ error: 'Error' }); }
+});
+
+// --- RUTA: Actualizar Datos del Cliente y Dar Recompensa (1 Sticker) ---
+app.put('/api/clientes/:celular', async (req, res) => {
+    try {
+        const celular = req.params.celular;
+        const { nombre, fecha_nacimiento } = req.body;
+
+        // 1. Consultar si el cliente ya tenía nombre guardado antes
+        const { data: cliente } = await supabase
+            .from('clientes')
+            .select('nombre, cantidad_stickers')
+            .eq('celular', celular)
+            .single();
+
+        let nuevosStickers = cliente.cantidad_stickers;
+        let ganoSticker = false;
+
+        // 2. Si el cliente NO tenía nombre y ahora sí envió uno, le regalamos 1 sticker
+        if (!cliente.nombre && nombre && nombre.trim() !== '') {
+            nuevosStickers += 1;
+            ganoSticker = true;
+        }
+
+        // 3. Guardar los datos actualizados y el nuevo saldo de stickers
+        await supabase
+            .from('clientes')
+            .update({ 
+                nombre: nombre, 
+                fecha_nacimiento: fecha_nacimiento,
+                cantidad_stickers: nuevosStickers
+            })
+            .eq('celular', celular);
+
+        // 4. Responderle a la Web App si ganó premio o no
+        res.json({ success: true, ganoSticker: ganoSticker, totalStickers: nuevosStickers });
+    } catch (error) { 
+        console.error("Error actualizando perfil:", error);
+        res.status(500).json({ error: 'Error interno' }); 
+    }
+});
+
+
 // --- INICIO DEL SERVIDOR ---
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
