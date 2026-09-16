@@ -95,8 +95,8 @@ app.get('/api/menu', async (req, res) => {
 // --- RUTA INTEGRADA: Registrar venta, descontar stock, guardar observaciones, fidelización y enviar a tablet ---
 app.post('/api/pedidos', async (req, res) => {
     try {
-        // ---> FIDELIZACIÓN: Añadimos 'celular_cliente' para recibirlo desde el frontend
-        const { total, metodo_pago, detalles, turno_id, observaciones, celular_cliente } = req.body;
+        // ---> FIDELIZACIÓN: Añadimos 'celular_cliente' y 'premios_canjeados'
+        const { total, metodo_pago, detalles, turno_id, observaciones, celular_cliente, premios_canjeados } = req.body;
         const fecha_hora = new Date().toISOString();
 
         // 1. Guardar el encabezado del pedido
@@ -132,49 +132,53 @@ app.post('/api/pedidos', async (req, res) => {
 
         // 3. Descontar inventario y REGISTRAR EN KARDEX
         for (let item of detalles) {
-            const { data: varianteData } = await supabase
-                .from('producto_variantes')
-                .select(`stock_actual, productos ( controla_inventario )`)
-                .eq('id', item.variante_id)
-                .single();
-
-            if (varianteData && varianteData.productos.controla_inventario) {
-                const nuevoStock = varianteData.stock_actual - item.cantidad;
-                
-                // Actualizamos el stock
-                await supabase
+            if (item.variante_id) {
+                const { data: varianteData } = await supabase
                     .from('producto_variantes')
-                    .update({ stock_actual: nuevoStock })
-                    .eq('id', item.variante_id);
+                    .select(`stock_actual, productos ( controla_inventario )`)
+                    .eq('id', item.variante_id)
+                    .single();
+
+                if (varianteData && varianteData.productos.controla_inventario) {
+                    const nuevoStock = varianteData.stock_actual - item.cantidad;
                     
-                // REGISTRO EN EL KARDEX (SALIDA POR VENTA)
-                await supabase
-                    .from('kardex_inventario')
-                    .insert([{
-                        variante_id: item.variante_id,
-                        tipo_movimiento: 'Salida',
-                        cantidad: item.cantidad,
-                        fecha_hora: fecha_hora,
-                        motivo: `Venta POS (Pedido #${pedido.id})`
-                    }]);
+                    // Actualizamos el stock
+                    await supabase
+                        .from('producto_variantes')
+                        .update({ stock_actual: nuevoStock })
+                        .eq('id', item.variante_id);
+                        
+                    // REGISTRO EN EL KARDEX (SALIDA POR VENTA)
+                    await supabase
+                        .from('kardex_inventario')
+                        .insert([{
+                            variante_id: item.variante_id,
+                            tipo_movimiento: 'Salida',
+                            cantidad: item.cantidad,
+                            fecha_hora: fecha_hora,
+                            motivo: `Venta POS (Pedido #${pedido.id})`
+                        }]);
+                }
             }
         }
 
         // 4. ¡FILTRO INTELIGENTE PARA LA TABLET (Ocultar Categoría 6 K-Merch)!
         let detallesParaCocina = [];
-        let soloKMerch = true; // ---> Ajuste descuadre K-Merch: verificaremos si TODO es K-Merch
+        let soloKMerch = true; 
 
         for (let item of detalles) {
-            const { data: infoProd } = await supabase
-                .from('producto_variantes')
-                .select('productos ( categoria_id )')
-                .eq('id', item.variante_id)
-                .single();
+            if (item.variante_id) {
+                const { data: infoProd } = await supabase
+                    .from('producto_variantes')
+                    .select('productos ( categoria_id )')
+                    .eq('id', item.variante_id)
+                    .single();
 
-            if (infoProd && infoProd.productos) {
-                if (infoProd.productos.categoria_id !== 6) {
-                    detallesParaCocina.push(item);
-                    soloKMerch = false; // Hay productos que van a cocina
+                if (infoProd && infoProd.productos) {
+                    if (infoProd.productos.categoria_id !== 6) {
+                        detallesParaCocina.push(item);
+                        soloKMerch = false; 
+                    }
                 }
             }
         }
@@ -196,24 +200,33 @@ app.post('/api/pedidos', async (req, res) => {
             });
         }
 
-        // ---> FIDELIZACIÓN: Lógica de Registro y Acumulación de Stickers
+        // ---> FIDELIZACIÓN: Lógica de Registro, Acumulación y CANJE de Stickers
+        const premiosAProcesar = premios_canjeados || [];
+        
         if (celular_cliente && celular_cliente.trim() !== '') {
             const celular = celular_cliente.trim();
 
+            // Sumamos 1 sticker SOLO si el cliente pagó algo de dinero real (total > 0)
+            const stickersGanados = total > 0 ? 1 : 0;
+            
+            // Calculamos cuántos stickers gastó en total en este ticket
+            const stickersGastados = premiosAProcesar.reduce((sum, p) => sum + p.costo_stickers, 0);
+
             // Consultar si el cliente ya existe
-            const { data: clienteExistente, error: errBusqueda } = await supabase
+            const { data: clienteExistente } = await supabase
                 .from('clientes')
                 .select('cantidad_stickers')
                 .eq('celular', celular)
                 .single();
 
             if (clienteExistente) {
-                // Cliente recurrente: Sumar 1 sticker
+                // Actualizamos saldo sumando lo que ganó y restando lo que gastó
+                const nuevoSaldo = clienteExistente.cantidad_stickers + stickersGanados - stickersGastados;
                 await supabase
                     .from('clientes')
-                    .update({ cantidad_stickers: clienteExistente.cantidad_stickers + 1 })
+                    .update({ cantidad_stickers: nuevoSaldo })
                     .eq('celular', celular);
-            } else {
+            } else if (stickersGanados > 0) {
                 // Cliente nuevo: Crear registro con 1 sticker
                 await supabase
                     .from('clientes')
@@ -221,6 +234,16 @@ app.post('/api/pedidos', async (req, res) => {
                         celular: celular, 
                         cantidad_stickers: 1 
                     }]);
+            }
+
+            // Registrar auditoría de los canjes realizados para tu historial
+            if (premiosAProcesar.length > 0) {
+                const auditoria = premiosAProcesar.map(p => ({
+                    celular_cliente: celular,
+                    premio_id: p.premio_id,
+                    turno_id: turno_id
+                }));
+                await supabase.from('historial_canjes').insert(auditoria);
             }
         }
 
@@ -962,6 +985,59 @@ app.get('/api/clientes/:celular', async (req, res) => {
     } catch (error) {
         console.error("Error al consultar cliente:", error);
         res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+
+// --- RUTA: Consultar Premios Disponibles (CON NOMBRE DINÁMICO DESDE EL INVENTARIO) ---
+app.get('/api/clientes/:celular/premios-disponibles', async (req, res) => {
+    try {
+        const celular = req.params.celular;
+
+        // 1. Buscamos al cliente y sus stickers
+        const { data: cliente } = await supabase
+            .from('clientes')
+            .select('cantidad_stickers')
+            .eq('celular', celular)
+            .single();
+
+        if (!cliente) return res.json({ stickers: 0, premios: [] });
+
+        // 2. Buscamos los premios, pero ahora le pedimos a Supabase que traiga los nombres reales
+        const { data: premios } = await supabase
+            .from('premios_fidelizacion')
+            .select(`
+                id,
+                costo_stickers,
+                variante_id_referencia,
+                producto_variantes (
+                    nombre_variante,
+                    productos ( nombre_producto )
+                )
+            `)
+            .eq('estado', true)
+            .lte('costo_stickers', cliente.cantidad_stickers)
+            .order('costo_stickers', { ascending: false });
+
+        // 3. Formateamos la respuesta para que la caja la entienda fácil
+        const premiosFormateados = (premios || []).map(p => {
+            // Extraemos los nombres reales de las tablas relacionadas
+            const nombreProd = p.producto_variantes?.productos?.nombre_producto || 'Producto';
+            const nombreVar = p.producto_variantes?.nombre_variante || 'Variante';
+            
+            return {
+                id: p.id,
+                costo_stickers: p.costo_stickers,
+                variante_id_referencia: p.variante_id_referencia,
+                // ¡Magia! Construimos el nombre exacto: Ej. "Base Bingsu (Personal)"
+                nombre_premio: `${nombreProd} (${nombreVar})` 
+            };
+        });
+
+        res.json({ stickers: cliente.cantidad_stickers, premios: premiosFormateados });
+    } catch (error) {
+        console.error("Error al buscar premios:", error);
+        res.status(500).json({ error: 'Error interno' });
     }
 });
 
