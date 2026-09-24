@@ -26,6 +26,11 @@
         .btn-toggle { background: #111; color: white; }
         .btn-toggle:hover { background: #333; }
         .btn-crear { background: #27ae60; color: white; margin-bottom: 15px; width: 100%; padding: 10px; font-size: 14px; }
+        
+        /* MODAL */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; }
+        .modal-box { background: white; width: 400px; border-radius: 8px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .input-form { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: inherit; }
     </style>
 </head>
 <body>
@@ -39,7 +44,7 @@
         <!-- COLUMNA 1: PREMIOS -->
         <div class="card">
             <h3>Catálogo de Premios</h3>
-            <button class="btn btn-crear" onclick="alert('Módulo de creación en desarrollo')">+ Crear Nuevo Premio</button>
+            <button class="btn btn-crear" onclick="abrirModalCrearPremio()">+ Crear Nuevo Premio</button>
             <table>
                 <thead>
                     <tr>
@@ -73,8 +78,27 @@
         </div>
     </div>
 
+    <!-- MODAL PARA CREAR PREMIO -->
+    <div class="modal-overlay" id="modal-crear">
+        <div class="modal-box">
+            <h3 style="margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px;">Crear Nuevo Premio</h3>
+            
+            <label style="font-weight: bold; font-size: 13px;">1. Selecciona el Producto a Regalar:</label>
+            <select id="select-variante" class="input-form">
+                <option value="" disabled selected>Cargando inventario...</option>
+            </select>
+
+            <label style="font-weight: bold; font-size: 13px;">2. Costo (Stickers necesarios):</label>
+            <input type="number" id="input-costo" class="input-form" min="1" value="10">
+
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn" style="flex: 1; background: #e74c3c; color: white; padding: 10px;" onclick="document.getElementById('modal-crear').style.display='none'">Cancelar</button>
+                <button class="btn" style="flex: 1; background: #27ae60; color: white; padding: 10px;" onclick="guardarNuevoPremio()" id="btn-guardar-premio">Guardar Premio</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // Validación de admin
         if (localStorage.getItem('rol_activo') !== 'admin') window.location.href = 'login.html';
 
         async function cargarPremios() {
@@ -135,6 +159,63 @@
                 });
                 cargarPremios(); 
             } catch (e) { alert('Error de conexión'); }
+        }
+
+        // --- LÓGICA DE CREACIÓN DE PREMIOS ---
+        async function abrirModalCrearPremio() {
+            document.getElementById('modal-crear').style.display = 'flex';
+            const select = document.getElementById('select-variante');
+            
+            try {
+                // Reutilizamos tu ruta de inventario general
+                const res = await fetch('https://seori-backend.onrender.com/api/productos');
+                const productos = await res.json();
+                
+                select.innerHTML = '<option value="" disabled selected>-- Selecciona un producto --</option>';
+                
+                productos.forEach(prod => {
+                    if (prod.producto_variantes) {
+                        prod.producto_variantes.forEach(variante => {
+                            select.innerHTML += `<option value="${variante.id}">${prod.nombre_producto} (${variante.nombre_variante})</option>`;
+                        });
+                    }
+                });
+            } catch (e) {
+                select.innerHTML = '<option value="" disabled>Error al cargar inventario</option>';
+            }
+        }
+
+        async function guardarNuevoPremio() {
+            const varianteId = document.getElementById('select-variante').value;
+            const costo = document.getElementById('input-costo').value;
+            
+            if (!varianteId) return alert("Por favor selecciona un producto.");
+            if (costo < 1) return alert("El costo debe ser de al menos 1 sticker.");
+
+            const btn = document.getElementById('btn-guardar-premio');
+            btn.innerText = "Guardando..."; btn.disabled = true;
+
+            try {
+                const res = await fetch('https://seori-backend.onrender.com/api/admin/premios', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ variante_id: varianteId, costo_stickers: costo })
+                });
+
+                if (!res.ok) throw new Error("Error al guardar");
+
+                document.getElementById('modal-crear').style.display = 'none';
+                document.getElementById('select-variante').value = "";
+                document.getElementById('input-costo').value = "10";
+                
+                alert("¡Premio creado con éxito!");
+                cargarPremios(); // Refresca la tabla automáticamente
+
+            } catch (error) {
+                alert("Hubo un error al crear el premio.");
+            } finally {
+                btn.innerText = "Guardar Premio"; btn.disabled = false;
+            }
         }
 
         cargarPremios();
