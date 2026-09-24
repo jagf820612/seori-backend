@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Fidelización - Seori</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: #f8f9fa; padding: 30px; color: #111111; margin: 0; }
+        .header-container { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #111111; padding-bottom: 15px; max-width: 1000px; margin: 0 auto 30px auto; }
+        .header-container h1 { margin: 0; font-size: 24px; color: #111111; }
+        .btn-volver { background: #333; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 14px; font-weight: bold; }
+        
+        .main-container { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #e0e0e0; border-top: 4px solid #f1c40f; }
+        
+        h3 { margin-top: 0; margin-bottom: 20px; color: #111; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; color: #555; }
+        
+        .badge-activo { background: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .badge-inactivo { background: #f8d7da; color: #721c24; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        
+        .btn { padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; border: none; transition: 0.2s; }
+        .btn-toggle { background: #111; color: white; }
+        .btn-toggle:hover { background: #333; }
+        .btn-crear { background: #27ae60; color: white; margin-bottom: 15px; width: 100%; padding: 10px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <h1>🎁 Gestión de Fidelización</h1>
+        <a href="admin.html" class="btn-volver">⬅ Volver al Panel</a>
+    </div>
+
+    <div class="main-container">
+        <!-- COLUMNA 1: PREMIOS -->
+        <div class="card">
+            <h3>Catálogo de Premios</h3>
+            <button class="btn btn-crear" onclick="alert('Módulo de creación en desarrollo')">+ Crear Nuevo Premio</button>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Premio</th>
+                        <th>Costo</th>
+                        <th>Estado</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-premios">
+                    <tr><td colspan="4" style="text-align: center;">Cargando premios...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- COLUMNA 2: HISTORIAL -->
+        <div class="card" style="border-top-color: #3498db;">
+            <h3>Últimos Canjes Realizados</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Celular</th>
+                        <th>Premio Entregado</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-historial">
+                    <tr><td colspan="3" style="text-align: center;">Cargando historial...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Validación de admin
+        if (localStorage.getItem('rol_activo') !== 'admin') window.location.href = 'login.html';
+
+        async function cargarPremios() {
+            try {
+                const res = await fetch('https://seori-backend.onrender.com/api/admin/premios');
+                const premios = await res.json();
+                const tbody = document.getElementById('tabla-premios');
+                
+                if (premios.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No hay premios configurados.</td></tr>';
+                
+                let html = '';
+                premios.forEach(p => {
+                    const nombre = p.producto_variantes?.productos?.nombre_producto ? 
+                                  `${p.producto_variantes.productos.nombre_producto} (${p.producto_variantes.nombre_variante})` : 
+                                  'Variante Borrada';
+                    const estadoHtml = p.estado ? '<span class="badge-activo">Activo</span>' : '<span class="badge-inactivo">Pausado</span>';
+                    
+                    html += `<tr>
+                        <td><strong>${nombre}</strong></td>
+                        <td>⭐ ${p.costo_stickers}</td>
+                        <td>${estadoHtml}</td>
+                        <td><button class="btn btn-toggle" onclick="toggleEstadoPremio(${p.id}, ${!p.estado})">${p.estado ? 'Pausar' : 'Activar'}</button></td>
+                    </tr>`;
+                });
+                tbody.innerHTML = html;
+            } catch (e) { tbody.innerHTML = '<tr><td colspan="4">Error al cargar.</td></tr>'; }
+        }
+
+        async function cargarHistorial() {
+            try {
+                const res = await fetch('https://seori-backend.onrender.com/api/admin/historial-canjes');
+                const historial = await res.json();
+                const tbody = document.getElementById('tabla-historial');
+                
+                if (historial.length === 0) return tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">No hay canjes recientes.</td></tr>';
+                
+                let html = '';
+                historial.forEach(h => {
+                    const fecha = new Date(h.fecha_canje).toLocaleDateString('es-CO', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+                    const nombre = h.premios_fidelizacion?.producto_variantes?.productos?.nombre_producto || 'Premio';
+                    
+                    html += `<tr>
+                        <td style="color:#666;">${fecha}</td>
+                        <td style="font-weight:bold;">${h.celular_cliente}</td>
+                        <td>🎁 ${nombre}</td>
+                    </tr>`;
+                });
+                tbody.innerHTML = html;
+            } catch (e) { tbody.innerHTML = '<tr><td colspan="3">Error al cargar.</td></tr>'; }
+        }
+
+        async function toggleEstadoPremio(id, nuevoEstado) {
+            try {
+                await fetch(`https://seori-backend.onrender.com/api/admin/premios/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ estado: nuevoEstado })
+                });
+                cargarPremios(); 
+            } catch (e) { alert('Error de conexión'); }
+        }
+
+        cargarPremios();
+        cargarHistorial();
+    </script>
+</body>
+</html>
