@@ -1135,10 +1135,10 @@ app.put('/api/admin/premios/:id', async (req, res) => {
         if (error) throw error;
         res.json({ success: true });
     } catch (error) { res.status(500).json({ error: error.message }); }
-});
+ } );
 
-// 3. Obtener el historial completo de canjes de clientes
-app.get('/api/admin/historial-canjes', async (req, res) => {
+ // 3. Obtener el historial completo de canjes de clientes
+ app.get('/api/admin/historial-canjes', async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('historial_canjes')
@@ -1154,6 +1154,26 @@ app.get('/api/admin/historial-canjes', async (req, res) => {
         if (error) throw error;
         res.json(data);
     } catch (error) { res.status(500).json({ error: error.message }); }
+// 4. Crear un nuevo premio desde el panel de admin
+app.post('/api/admin/premios', async (req, res) => {
+    try {
+        const { variante_id, costo_stickers } = req.body;
+        
+        const { error } = await supabase
+            .from('premios_fidelizacion')
+            .insert([{ 
+                variante_id_referencia: variante_id, 
+                costo_stickers: costo_stickers,
+                estado: true // Entra activo por defecto
+            }]);
+        
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (error) { 
+        res.status(500).json({ error: error.message }); 
+    }
+});
+
 });
 
 
