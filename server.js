@@ -207,7 +207,7 @@ app.post('/api/pedidos', async (req, res) => {
             const celular = celular_cliente.trim();
 
             // Sumamos 1 sticker SOLO si el cliente pagó algo de dinero real (total > 0)
-            const stickersGanados = total > 0 ? 1 : 0;
+            const stickersGanados = total >= 14000 ? 1 : 0;
             
             // Calculamos cuántos stickers gastó en total en este ticket
             const stickersGastados = premiosAProcesar.reduce((sum, p) => sum + p.costo_stickers, 0);
