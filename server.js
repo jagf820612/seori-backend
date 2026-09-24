@@ -1104,6 +1104,58 @@ app.put('/api/clientes/:celular', async (req, res) => {
     }
 });
 
+// ==========================================
+// RUTAS ADMINISTRADOR (PANEL DE CONTROL)
+// ==========================================
+
+// 1. Obtener lista completa de premios (activos e inactivos) con nombres de inventario
+app.get('/api/admin/premios', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('premios_fidelizacion')
+            .select(`
+                id, costo_stickers, estado,
+                producto_variantes ( nombre_variante, productos ( nombre_producto ) )
+            `)
+            .order('id', { ascending: true });
+        
+        if (error) throw error;
+        res.json(data);
+    } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// 2. Cambiar estado de un premio (Activar/Pausar)
+app.put('/api/admin/premios/:id', async (req, res) => {
+    try {
+        const { error } = await supabase
+            .from('premios_fidelizacion')
+            .update({ estado: req.body.estado })
+            .eq('id', req.params.id);
+        
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// 3. Obtener el historial completo de canjes de clientes
+app.get('/api/admin/historial-canjes', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('historial_canjes')
+            .select(`
+                id, fecha_canje, celular_cliente, turno_id,
+                premios_fidelizacion ( 
+                    producto_variantes ( nombre_variante, productos ( nombre_producto ) )
+                )
+            `)
+            .order('fecha_canje', { ascending: false })
+            .limit(100); // Trae los últimos 100 canjes para no saturar la vista
+        
+        if (error) throw error;
+        res.json(data);
+    } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
 
 // --- INICIO DEL SERVIDOR ---
 const PORT = process.env.PORT || 3001;
