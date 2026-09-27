@@ -1,0 +1,22 @@
+{
+  "name": "Seori Rewards",
+  "short_name": "Seori",
+  "start_url": "./fidelizacion.html",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#f8f9fa",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "img/logo-seori.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "img/logo-seori.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
