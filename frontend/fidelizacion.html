@@ -213,7 +213,7 @@
             if(data.premios && data.premios.length > 0) {
                 data.premios.forEach(p => {
                     if (puntosActuales >= p.costos) {
-                        htmlAlcanzados += `<div class="premio-item"><span>${p.nombre}</span><span style="color: #ffcc00; font-weight: 800;">-${p.costos} pts</span></div>`;
+                        htmlAlcanzados += `<div class="premio-item"><span>${p.nombre}</span><span style="color: #ffcc00; font-weight: 800;">${p.costos} pts</span></div>`;
                         contadorAlcanzados++;
                     } else {
                         const faltantes = p.costos - puntosActuales;
