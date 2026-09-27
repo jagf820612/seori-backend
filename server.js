@@ -1041,7 +1041,7 @@ app.get('/api/clientes/:celular/premios-disponibles', async (req, res) => {
     }
 });
 
-// --- RUTA: Consultar Perfil y Premios del Cliente ---
+// --- RUTA: Consultar Perfil y TODOS los Premios Activos ---
 app.get('/api/clientes/:celular/perfil', async (req, res) => {
     try {
         const celular = req.params.celular;
@@ -1051,9 +1051,11 @@ app.get('/api/clientes/:celular/perfil', async (req, res) => {
 
         if (!cliente) return res.json({ existe: false });
 
+        // Traemos TODOS los premios activos, ordenados de menor a mayor costo
         const { data: premios } = await supabase.from('premios_fidelizacion')
             .select('costo_stickers, producto_variantes(nombre_variante, productos(nombre_producto))')
-            .eq('estado', true).lte('costo_stickers', cliente.cantidad_stickers);
+            .eq('estado', true)
+            .order('costo_stickers', { ascending: true });
 
         const premiosFormateados = (premios || []).map(p => ({
             costos: p.costo_stickers,
@@ -1063,7 +1065,6 @@ app.get('/api/clientes/:celular/perfil', async (req, res) => {
         res.json({ existe: true, ...cliente, premios: premiosFormateados });
     } catch (error) { res.status(500).json({ error: 'Error' }); }
 });
-
 // --- RUTA: Actualizar Datos del Cliente y Dar Recompensa (1 Sticker) ---
 app.put('/api/clientes/:celular', async (req, res) => {
     try {
