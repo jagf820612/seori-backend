@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Seori Rewards</title>
     
-    <!-- Íconos y configuración de PWA (App Nativa) -->
     <link rel="icon" type="image/png" href="img/logo-seori.png">
     <link rel="apple-touch-icon" href="img/logo-seori.png">
     <meta name="apple-mobile-web-app-title" content="Seori Rewards">
@@ -51,7 +50,6 @@
         .input-celular:focus { border-color: #111111; }
         .btn-ingresar { width: 100%; background: #111111; color: white; border: none; padding: 14px; border-radius: 6px; font-size: 15px; font-weight: bold; margin-top: 15px; cursor: pointer; transition: background 0.2s; }
         .btn-ingresar:hover { background: #333333; }
-        .btn-ingresar:active { transform: scale(0.98); }
 
         /* SECCIÓN RECOMPENSAS Y PERFIL */
         #rewards-section { display: none; }
@@ -60,18 +58,21 @@
         .input-perfil { width: 100%; padding: 10px; border: 1px solid #bdc3c7; border-radius: 6px; font-size: 14px; margin-bottom: 12px; outline: none; font-family: inherit; }
         .btn-guardar { width: 100%; background: #27ae60; color: white; border: none; padding: 10px; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         
-        .sticker-card { background: #f8f9fa; border: 1px solid #dcdde1; border-radius: 8px; padding: 20px; }
-        .grid-stickers { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 15px; }
-        .circulo-sticker { width: 100%; aspect-ratio: 1; border-radius: 50%; background: #eeeeee; display: flex; justify-content: center; align-items: center; font-size: 20px; transition: 0.5s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
-        .circulo-sticker.lleno { background: #111111; color: white; animation: pop 0.3s ease-in-out; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
-        .meta-texto { font-weight: bold; color: #111111; margin-top: 15px; font-size: 15px;}
+        /* NUEVO: ESTILO BILLETERA DE PUNTOS */
+        .puntos-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 25px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .puntos-titulo { font-weight: bold; color: #888; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }
+        .puntos-numero { font-size: 56px; font-weight: 900; color: #111; line-height: 1.1; margin: 5px 0; text-shadow: 2px 2px 0px #f1c40f; }
+        .puntos-label { color: #555; font-size: 15px; font-weight: bold; }
         
-        .premio-item { background: #111111; color: white; padding: 12px 15px; border-radius: 6px; margin-bottom: 8px; font-size: 14px; font-weight: bold; text-align: left; display: flex; justify-content: space-between; align-items: center; }
-
-        @keyframes pop { 0% { transform: scale(0.8); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        /* ESTILO DE PREMIOS */
+        .seccion-titulo { margin: 20px 0 10px 0; font-weight: bold; text-align: left; font-size: 14px; }
+        .premio-item { background: #111111; color: white; padding: 12px 15px; border-radius: 6px; margin-bottom: 8px; font-size: 14px; font-weight: bold; text-align: left; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .premio-item.bloqueado { background: #f0f0f0; color: #888; border: 1px dashed #ccc; box-shadow: none; }
+        .premio-item.bloqueado span:first-child { opacity: 0.8; }
+        
         .btn-volver { background: transparent; color: #666666; border: none; margin-top: 25px; text-decoration: underline; cursor: pointer; font-size: 14px; }
 
-        /* --- MODAL TÉRMINOS Y CONDICIONES --- */
+        /* MODAL TÉRMINOS Y CONDICIONES */
         .modal-tc-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; padding: 20px; }
         .modal-tc-box { background: white; width: 100%; max-width: 500px; max-height: 85vh; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: left; }
         .modal-tc-header { padding: 15px 20px; border-bottom: 1px solid #eee; background: #f8f9fa; display: flex; justify-content: space-between; align-items: center; }
@@ -79,7 +80,6 @@
         .btn-cerrar-tc { background: transparent; border: none; font-size: 20px; font-weight: bold; color: #999; cursor: pointer; }
         .modal-tc-content { padding: 20px; overflow-y: auto; font-size: 13px; color: #444; line-height: 1.6; }
         .modal-tc-content h4 { color: #111; margin-top: 15px; margin-bottom: 5px; font-size: 14px; }
-        
         .link-terminos { display: inline-block; margin-top: 20px; font-size: 12px; color: #888; text-decoration: underline; cursor: pointer; }
     </style>
 </head>
@@ -91,18 +91,18 @@
         <!-- PANTALLA 1: INGRESO -->
         <div id="login-section">
             <h2>Fidelización</h2>
-            <p>Ingresa tu número de celular para ver cuántos stickers has acumulado en tus visitas.</p>
+            <p>Ingresa tu número de celular para consultar tu saldo y ver los premios disponibles.</p>
             <input type="tel" id="input-cel" class="input-celular" placeholder="Ej: 3001234567" maxlength="10">
-            <button class="btn-ingresar" onclick="consultarStickers()" id="btn-login">Ver mi cartón</button>
+            <button class="btn-ingresar" onclick="consultarStickers()" id="btn-login">Ver mis puntos</button>
         </div>
 
-        <!-- PANTALLA 2: PERFIL, CARTÓN Y PREMIOS -->
+        <!-- PANTALLA 2: PERFIL Y BILLETERA -->
         <div id="rewards-section">
             <h2 id="saludo-cliente" style="margin-bottom: 20px;">¡Hola!</h2>
             
             <div class="perfil-box">
                 <div id="banner-recompensa" style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 6px; font-size: 13px; font-weight: bold; text-align: center; margin-bottom: 15px; border: 1px dashed #ffe8a1; display: none;">
-                    🎁 ¡Completa tus datos por primera vez y gana 1 sticker gratis!
+                    🎁 ¡Completa tus datos por primera vez y gana 1 punto gratis!
                 </div>
                 
                 <label class="perfil-label">Tu Nombre:</label>
@@ -114,22 +114,24 @@
                 <button onclick="guardarPerfil()" class="btn-guardar" id="btn-guardar">Guardar Mis Datos</button>
             </div>
             
-            <div class="sticker-card">
-                <div style="font-weight: bold; color: #555;">Tu Cartón Virtual</div>
-                <div class="grid-stickers" id="grid-stickers"></div>
-                <div class="meta-texto" id="texto-progreso">Tienes 0 de 10 stickers</div>
+            <!-- NUEVO: BILLETERA NUMÉRICA -->
+            <div class="puntos-card">
+                <div class="puntos-titulo">Tu Saldo Actual</div>
+                <div class="puntos-numero" id="texto-puntos">0</div>
+                <div class="puntos-label">PUNTOS</div>
             </div>
 
-            <div id="lista-premios" style="margin-top: 20px;"></div>
+            <!-- CONTENEDORES DE PREMIOS -->
+            <div id="lista-premios-alcanzados"></div>
+            <div id="lista-premios-catalogo"></div>
 
             <button class="btn-volver" onclick="salir()">Salir / Buscar otro número</button>
         </div>
         
-        <!-- Enlace que abre los términos y condiciones -->
         <a class="link-terminos" onclick="abrirTerminos()">Términos y Condiciones</a>
     </div>
 
-    <!-- MODAL TÉRMINOS Y CONDICIONES (Oculto por defecto) -->
+    <!-- MODAL TÉRMINOS Y CONDICIONES -->
     <div class="modal-tc-overlay" id="modal-tc">
         <div class="modal-tc-box">
             <div class="modal-tc-header">
@@ -138,38 +140,25 @@
             </div>
             <div class="modal-tc-content">
                 <p><strong>Programa de Fidelización "Seori Rewards"</strong></p>
-                
                 <h4>1. Aspectos Generales</h4>
                 <p>El presente documento establece los Términos y Condiciones del programa operado por Seori Korean Ice, en Caucasia, Antioquia. La participación implica la aceptación de estas reglas.</p>
-                
                 <h4>2. Inscripción</h4>
                 <p>La participación es gratuita. El número de celular funciona como cuenta única e intransferible. Los beneficios no son acumulables entre diferentes números.</p>
-                
-                <h4>3. Acumulación de Stickers</h4>
-                <p>El cliente recibirá un (1) sticker por cada transacción (factura) cuyo valor sea igual o superior a $14.000 COP. No se sumarán múltiples stickers en una misma factura, independientemente de si el valor supera múltiplos de $14.000. Tampoco se permite la división de cuentas. Se otorgará un (1) sticker adicional, por única vez, al completar el perfil en la plataforma.</p>
-                
+                <h4>3. Acumulación de Puntos</h4>
+                <p>El cliente recibirá un (1) punto por cada transacción (factura) cuyo valor sea igual o superior a $14.000 COP. No se sumarán múltiples puntos en una misma factura, independientemente de si el valor supera múltiplos de $14.000. Tampoco se permite la división de cuentas. Se otorgará un (1) punto adicional, por única vez, al completar el perfil en la plataforma.</p>
                 <h4>4. Canje de Premios</h4>
                 <p>El canje está sujeto a la disponibilidad de inventario en el punto de venta físico. Los premios no son canjeables por dinero en efectivo ni utilizables como parte de pago.</p>
-                
                 <h4>5. Vigencia y Modificaciones</h4>
-                <p>Seori Korean Ice se reserva el derecho de modificar montos, stickers requeridos o productos disponibles. El programa tiene vigencia indefinida, pudiendo ser cancelado con previo aviso de 30 días calendario.</p>
-                
+                <p>Seori Korean Ice se reserva el derecho de modificar montos, puntos requeridos o productos disponibles. El programa tiene vigencia indefinida, pudiendo ser cancelado con previo aviso de 30 días calendario.</p>
                 <h4>6. Privacidad y Habeas Data</h4>
-                <p>Al proporcionar sus datos, el cliente autoriza a Seori Korean Ice para recolectar y usar su información con el fin de gestionar el programa de fidelización y enviar información promocional. El titular puede solicitar la actualización o eliminación de sus datos en cualquier momento a través de los canales de atención del local, lo cual implicará la pérdida de los stickers acumulados.</p>
+                <p>Al proporcionar sus datos, el cliente autoriza a Seori Korean Ice para recolectar y usar su información con el fin de gestionar el programa y enviar promociones. El titular puede solicitar la actualización o eliminación de sus datos en los canales de atención del local, implicando la pérdida de los puntos acumulados.</p>
             </div>
         </div>
     </div>
 
     <script>
-        const META_STICKERS = 10; 
-
-        // Funciones para el Modal de Términos
-        function abrirTerminos() {
-            document.getElementById('modal-tc').style.display = 'flex';
-        }
-        function cerrarTerminos() {
-            document.getElementById('modal-tc').style.display = 'none';
-        }
+        function abrirTerminos() { document.getElementById('modal-tc').style.display = 'flex'; }
+        function cerrarTerminos() { document.getElementById('modal-tc').style.display = 'none'; }
 
         async function consultarStickers() {
             const celular = document.getElementById('input-cel').value.trim();
@@ -185,12 +174,12 @@
                 if (data.existe) {
                     mostrarCarton(data);
                 } else {
-                    alert("Este número aún no está registrado. ¡Haz tu primera compra en caja para ganar tu primer sticker y activar tu cuenta!");
-                    btn.innerText = "Ver mi cartón"; btn.disabled = false;
+                    alert("Este número aún no está registrado. ¡Haz tu primera compra en caja para ganar tu primer punto y activar tu cuenta!");
+                    btn.innerText = "Ver mis puntos"; btn.disabled = false;
                 }
             } catch (error) {
                 alert("Error al conectar con Seori. Intenta de nuevo.");
-                btn.innerText = "Ver mi cartón"; btn.disabled = false;
+                btn.innerText = "Ver mis puntos"; btn.disabled = false;
             }
         }
 
@@ -208,33 +197,37 @@
                 document.getElementById('banner-recompensa').style.display = 'none';
             }
 
-            document.getElementById('texto-progreso').innerText = `Tienes ${data.cantidad_stickers} de ${META_STICKERS} stickers`;
-            const grid = document.getElementById('grid-stickers');
-            grid.innerHTML = '';
+            // ACTUALIZACIÓN DE SALDO NUMÉRICO
+            const puntosActuales = data.cantidad_stickers;
+            document.getElementById('texto-puntos').innerText = puntosActuales;
 
-            for(let i = 1; i <= META_STICKERS; i++) {
-                const circulo = document.createElement('div');
-                circulo.className = 'circulo-sticker';
-                
-                if(i <= data.cantidad_stickers) {
-                    circulo.classList.add('lleno');
-                    circulo.innerText = '🍧'; 
-                }
-                grid.appendChild(circulo);
-            }
+            // LÓGICA PARA DIVIDIR PREMIOS EN 2 LISTAS
+            const divAlcanzados = document.getElementById('lista-premios-alcanzados');
+            const divCatalogo = document.getElementById('lista-premios-catalogo');
+            
+            let htmlAlcanzados = '<div class="seccion-titulo" style="color: #27ae60;">🎁 Listos para canjear hoy:</div>';
+            let htmlCatalogo = '<div class="seccion-titulo" style="color: #888;">🔒 Próximas metas (Catálogo):</div>';
+            let contadorAlcanzados = 0;
+            let contadorCatalogo = 0;
 
-            const lista = document.getElementById('lista-premios');
             if(data.premios && data.premios.length > 0) {
-                let htmlPremios = '<h4 style="margin: 0 0 10px 0; color: #111; text-align: left; font-size: 14px;">🎁 Premios listos para canjear:</h4>';
                 data.premios.forEach(p => {
-                    htmlPremios += `<div class="premio-item"><span>${p.nombre}</span><span style="color: #ffcc00; font-weight: 800;">-${p.costos} pts</span></div>`;
+                    if (puntosActuales >= p.costos) {
+                        htmlAlcanzados += `<div class="premio-item"><span>${p.nombre}</span><span style="color: #ffcc00; font-weight: 800;">-${p.costos} pts</span></div>`;
+                        contadorAlcanzados++;
+                    } else {
+                        const faltantes = p.costos - puntosActuales;
+                        htmlCatalogo += `<div class="premio-item bloqueado"><span>${p.nombre}</span><span style="font-size: 11px;">Faltan ${faltantes} pts</span></div>`;
+                        contadorCatalogo++;
+                    }
                 });
-                lista.innerHTML = htmlPremios;
-            } else {
-                lista.innerHTML = '<p style="font-size: 13px; color: #666666; text-align: center; margin-top: 15px;">Aún no tienes stickers suficientes para canjear un premio. ¡Sigue disfrutando Seori!</p>';
             }
 
-            document.getElementById('btn-login').innerText = "Ver mi cartón"; 
+            // Renderizar condicionalmente las listas
+            divAlcanzados.innerHTML = contadorAlcanzados > 0 ? htmlAlcanzados : '<div class="seccion-titulo" style="color: #111;">🎁 Listos para canjear hoy:</div><p style="font-size: 13px; color: #666; text-align: left;">Sigue acumulando puntos para desbloquear premios.</p>';
+            divCatalogo.innerHTML = contadorCatalogo > 0 ? htmlCatalogo : '';
+
+            document.getElementById('btn-login').innerText = "Ver mis puntos"; 
             document.getElementById('btn-login').disabled = false;
         }
 
@@ -242,12 +235,9 @@
             const celular = document.getElementById('input-cel').value.trim();
             const nombre = document.getElementById('perfil-nombre').value.trim();
             const fecha = document.getElementById('perfil-fecha').value;
-            
             const btn = document.getElementById('btn-guardar');
             
-            if (!nombre) {
-                return alert("¡Oye! Por favor ingresa tu nombre para poder guardar tus datos.");
-            }
+            if (!nombre) return alert("¡Oye! Por favor ingresa tu nombre para poder guardar tus datos.");
 
             btn.innerText = "Guardando..."; btn.disabled = true;
 
@@ -261,13 +251,11 @@
                 const data = await response.json();
                 
                 if (data.ganoSticker) {
-                    alert("¡Felicidades! 🎉 Te hemos regalado 1 STICKER por completar tus datos.");
+                    alert("¡Felicidades! 🎉 Te hemos regalado 1 PUNTO por completar tus datos.");
                 } else {
                     alert("¡Tus datos han sido actualizados exitosamente!");
                 }
-                
                 consultarStickers();
-                
             } catch (error) {
                 alert("Error al guardar los datos. Intenta de nuevo.");
             } finally {
