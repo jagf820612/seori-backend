@@ -106,6 +106,11 @@
     <div class="top-bar">
         <h2>Seori POS</h2>
         <div>
+            <!-- INDICADOR DE CONEXIÓN -->
+            <div id="indicador-conexion" style="display: inline-flex; align-items: center; gap: 8px; font-weight: bold; font-size: 14px; background: #e8f5e9; color: #2e7d32; padding: 5px 12px; border-radius: 20px; border: 1px solid #c8e6c9; margin-right: 15px;">
+                <span id="icono-conexion">🟢</span> <span id="texto-conexion">En línea</span>
+            </div>
+            
             <span id="nombre-cajero" style="margin-right: 15px; font-weight: 500; font-size: 14px;"></span>
             <button class="btn-historial" onclick="abrirModalHistorial()">🕒 Historial Ventas</button>
             <button class="btn-cerrar-turno" onclick="iniciarCierreTurno()">Cerrar Turno</button>
@@ -145,12 +150,22 @@
                 
                 <textarea id="observaciones_pedido" class="input-compacto" placeholder="Observaciones (Ej: Para llevar...)" style="height: 35px; resize: none;"></textarea>
 
-                <select id="metodo_pago" class="input-compacto" onchange="toggleCalculadoraVueltos()">
+                <select id="metodo_pago" class="input-compacto" onchange="togglePagoMixto()">
                     <option value="" disabled selected>-- Selecciona método de pago --</option>
                     <option value="Efectivo">💵 Efectivo</option>
                     <option value="QR">📱 QR Bold</option>
                     <option value="Transferencia">🏦 Transferencia</option>
+                    <option value="Mixto">Pago Mixto (Efectivo + Transferencia)</option>
                 </select>
+                
+                <!-- CAJA OCULTA PARA PAGO MIXTO -->
+                <div id="caja-pago-mixto" style="display: none; background: #f8f9fa; padding: 15px; border-radius: 6px; margin-top: 10px; border: 1px solid #ddd;">
+                    <label style="font-size: 13px; color: #555;">Monto en Efectivo:</label>
+                    <input type="number" id="monto-efectivo-mixto" class="input-form" style="margin-bottom: 10px;" oninput="calcularRestanteMixto()">
+
+                    <label style="font-size: 13px; color: #555;">Restante por Transferencia/QR:</label>
+                    <input type="number" id="monto-transferencia-mixto" class="input-form" readonly style="background: #e9ecef; font-weight: bold;">
+                </div>
 
                 <!-- CALCULADORA DE VUELTOS -->
                 <div id="calculadora-vueltos" style="background: #f1f2f6; padding: 8px 10px; border-radius: 6px; border-left: 4px solid #27ae60; display: none;">
@@ -280,6 +295,78 @@
     </div>
 
     <script>
+        // ==========================================
+        // MODO OFFLINE Y SINCRONIZACIÓN
+        // ==========================================
+        window.addEventListener('online', manejarConexion);
+        window.addEventListener('offline', manejarConexion);
+        document.addEventListener('DOMContentLoaded', manejarConexion);
+
+        function manejarConexion() {
+            const indicador = document.getElementById('indicador-conexion');
+            const icono = document.getElementById('icono-conexion');
+            const texto = document.getElementById('texto-conexion');
+            
+            let pendientes = JSON.parse(localStorage.getItem('pedidos_offline')) || [];
+
+            if (navigator.onLine) {
+                if (pendientes.length > 0) {
+                    indicador.style.background = '#fff3cd'; 
+                    indicador.style.color = '#856404';
+                    icono.innerText = '⏳';
+                    texto.innerText = `Sincronizando ${pendientes.length} ventas...`;
+                    sincronizarPedidos();
+                } else {
+                    indicador.style.background = '#e8f5e9'; 
+                    indicador.style.color = '#2e7d32';
+                    icono.innerText = '🟢';
+                    texto.innerText = 'En línea';
+                }
+            } else {
+                indicador.style.background = '#f8d7da'; 
+                indicador.style.color = '#721c24';
+                icono.innerText = '🔴';
+                texto.innerText = pendientes.length > 0 ? `Sin internet (${pendientes.length} por subir)` : 'Sin internet (Modo Local)';
+            }
+        }
+
+        function guardarVentaOffline(pedido_data) {
+            let pendientes = JSON.parse(localStorage.getItem('pedidos_offline')) || [];
+            pedido_data._local_id = Date.now(); 
+            pendientes.push(pedido_data);
+            localStorage.setItem('pedidos_offline', JSON.stringify(pendientes));
+            
+            alert("📡 Sin conexión: La venta se guardó localmente y el ticket se imprimirá. Se subirá cuando regrese el internet.");
+            manejarConexion(); 
+        }
+
+        async function sincronizarPedidos() {
+            let pendientes = JSON.parse(localStorage.getItem('pedidos_offline')) || [];
+            if (pendientes.length === 0) return;
+
+            for (let i = 0; i < pendientes.length; i++) {
+                let pedido = pendientes[i];
+                try {
+                    const res = await fetch('https://seori-backend.onrender.com/api/pedidos', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(pedido)
+                    });
+
+                    if (res.ok) {
+                        pendientes.splice(i, 1);
+                        i--; 
+                        localStorage.setItem('pedidos_offline', JSON.stringify(pendientes));
+                    }
+                } catch (error) {
+                    console.error("Fallo al sincronizar el pedido:", error);
+                    break; 
+                }
+            }
+            manejarConexion(); 
+        }
+
+
         const rolActivo = localStorage.getItem('rol_activo');
         
         if (!rolActivo) {
@@ -597,18 +684,37 @@
             
             if (document.getElementById('metodo_pago').value === 'Efectivo') {
                 calcularVueltos();
+            } else if (document.getElementById('metodo_pago').value === 'Mixto') {
+                calcularRestanteMixto();
             }
         }
 
-        function toggleCalculadoraVueltos() {
+        function togglePagoMixto() {
             const metodo = document.getElementById('metodo_pago').value;
+            const cajaMixto = document.getElementById('caja-pago-mixto');
             const divCalculadora = document.getElementById('calculadora-vueltos');
-            if (metodo === 'Efectivo') {
+            
+            if (metodo === 'Mixto') {
+                cajaMixto.style.display = 'block';
+                divCalculadora.style.display = 'none';
+                document.getElementById('monto-efectivo-mixto').value = '';
+                document.getElementById('monto-transferencia-mixto').value = granTotalVenta; 
+            } else if (metodo === 'Efectivo') {
+                cajaMixto.style.display = 'none';
                 divCalculadora.style.display = 'block';
                 calcularVueltos(); 
             } else {
+                cajaMixto.style.display = 'none';
                 divCalculadora.style.display = 'none';
             }
+        }
+
+        function calcularRestanteMixto() {
+            const efectivoIngresado = parseFloat(document.getElementById('monto-efectivo-mixto').value) || 0;
+            let restante = granTotalVenta - efectivoIngresado;
+            if (restante < 0) restante = 0; 
+            
+            document.getElementById('monto-transferencia-mixto').value = restante;
         }
 
         function calcularVueltos() {
@@ -632,56 +738,93 @@
                 textoVueltos.style.color = "#27ae60"; 
             }
         }
+        
+        function limpiarCaja() {
+            carrito = []; actualizarTicket();
+            document.getElementById('observaciones_pedido').value = '';
+            document.getElementById('monto-recibido').value = '';
+            document.getElementById('metodo_pago').value = ''; 
+            document.getElementById('cliente-celular').value = ''; 
+            document.getElementById('info-stickers').style.display = 'none';
+            document.getElementById('contenedor-premios').style.display = 'none';
+            
+            // Limpiar campos mixtos
+            document.getElementById('monto-efectivo-mixto').value = '';
+            document.getElementById('monto-transferencia-mixto').value = '';
+            
+            togglePagoMixto(); 
+        }
 
-        // --- PROCESAR VENTA (MODIFICADO PARA ENVIAR PREMIOS) ---
+        // --- PROCESAR VENTA (CON MODO OFFLINE, PAGOS MIXTOS Y PREMIOS) ---
         window.procesarVenta = async () => {
             if (!carrito.length) return alert("Ticket vacío.");
             
             let metodo = document.getElementById('metodo_pago').value;
-            // Si el total es 0 (solo lleva el premio), forzamos el método para que no bloquee la venta
             if (!metodo && granTotalVenta === 0) metodo = "Efectivo"; 
             if (!metodo) return alert("⚠️ Selecciona el método de pago.");
-
-            const btn = document.getElementById('btn-cobrar'); 
-            btn.innerText = "Procesando..."; btn.disabled = true;
             
-            const celularCliente = document.getElementById('cliente-celular').value.trim();
+            let pagoEfectivo = 0;
+            let pagoTransferencia = 0;
+            
+            if (metodo === 'Efectivo') {
+                pagoEfectivo = granTotalVenta;
+            } else if (metodo === 'Transferencia' || metodo === 'QR') {
+                pagoTransferencia = granTotalVenta;
+            } else if (metodo === 'Mixto') {
+                pagoEfectivo = parseFloat(document.getElementById('monto-efectivo-mixto').value) || 0;
+                pagoTransferencia = parseFloat(document.getElementById('monto-transferencia-mixto').value) || 0;
+                
+                if (pagoEfectivo + pagoTransferencia !== granTotalVenta) {
+                    return alert("⚠️ La suma de efectivo y transferencia no coincide con el total de la venta.");
+                }
+            }
 
-            // Separamos productos normales y premios para que el backend no se confunda
+            const celularCliente = document.getElementById('cliente-celular').value.trim();
             const detallesBackend = carrito.map(i => { return { variante_id: i.idVariante, cantidad: i.cantidad, subtotal: i.precio * i.cantidad, nombre: i.nombre, variante: i.variante, notas: i.notas }; });
             const premiosCanjeados = carrito.filter(i => i.isPremio).map(i => ({ premio_id: i.premio_id, costo_stickers: i.costo_stickers }));
             
-            try {
-                const res = await fetch('https://seori-backend.onrender.com/api/pedidos', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ 
-                        turno_id: turnoActualId, 
-                        total: granTotalVenta, 
-                        metodo_pago: metodo, 
-                        observaciones: document.getElementById('observaciones_pedido').value, 
-                        detalles: detallesBackend,
-                        celular_cliente: celularCliente,
-                        premios_canjeados: premiosCanjeados // Enviamos la factura de los stickers a cobrar
-                    }) 
-                });
-                
-                if(!res.ok) throw new Error();
-                const data = await res.json();
-                
-                imprimirTicket(carrito, granTotalVenta, metodo, data.pedido_id);
-                
-                // Limpieza total
-                carrito = []; actualizarTicket();
-                document.getElementById('observaciones_pedido').value = '';
-                document.getElementById('monto-recibido').value = '';
-                document.getElementById('metodo_pago').value = ''; 
-                document.getElementById('cliente-celular').value = ''; 
-                document.getElementById('info-stickers').style.display = 'none';
-                document.getElementById('contenedor-premios').style.display = 'none';
-                toggleCalculadoraVueltos(); calcularVueltos();
-            } catch (e) { alert("Error al cobrar."); } 
-            finally { btn.innerText = "Cobrar Venta"; btn.disabled = false; }
+            const pedido_data = { 
+                turno_id: turnoActualId, 
+                total: granTotalVenta, 
+                metodo_pago: metodo, 
+                pago_efectivo: pagoEfectivo,
+                pago_transferencia: pagoTransferencia,
+                observaciones: document.getElementById('observaciones_pedido').value, 
+                detalles: detallesBackend,
+                celular_cliente: celularCliente,
+                premios_canjeados: premiosCanjeados 
+            };
+            
+            if (navigator.onLine) {
+                try {
+                    const btn = document.getElementById('btn-cobrar');
+                    btn.innerText = "Procesando..."; btn.disabled = true;
+
+                    const res = await fetch('https://seori-backend.onrender.com/api/pedidos', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(pedido_data)
+                    });
+
+                    if (!res.ok) throw new Error("Fallo en el servidor");
+                    
+                    const data = await res.json();
+                    imprimirTicket(carrito, granTotalVenta, metodo, data.pedido_id);
+                    limpiarCaja();
+                    
+                } catch (error) {
+                    guardarVentaOffline(pedido_data);
+                    imprimirTicket(carrito, granTotalVenta, metodo, "OFFLINE");
+                    limpiarCaja();
+                } finally {
+                    document.getElementById('btn-cobrar').innerText = "Cobrar Venta";
+                    document.getElementById('btn-cobrar').disabled = false;
+                }
+            } else {
+                guardarVentaOffline(pedido_data);
+                imprimirTicket(carrito, granTotalVenta, metodo, "OFFLINE");
+                limpiarCaja();
+            }
         }       
 
         window.abrirModalHistorial = function() { document.getElementById('modal-historial').style.display = 'flex'; cargarHistorialCaja(); }
