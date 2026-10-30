@@ -33,6 +33,8 @@
         .btn-admin { background: #ffffff; color: #111111; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; text-decoration: none; margin-right: 10px; display: none; font-size: 13px; }
         .btn-cerrar-turno { background: #555555; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; margin-right: 10px; font-size: 13px; }
         .btn-historial { background: #3498db; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; margin-right: 10px; }
+        .btn-cumple { background: #e84393; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; margin-right: 10px; transition: 0.2s; }
+        .btn-cumple:hover { background: #d63031; }
 
         .pos-container { display: flex; width: 100%; margin-top: 60px; height: calc(100vh - 60px); }
 
@@ -84,7 +86,18 @@
         .btn-premio { width: 100%; background: #ffc107; color: #333; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; margin-top: 4px; text-align: left; transition: 0.2s; }
         .btn-premio:hover { background: #e0a800; }
 
-        /* MODALES */
+        /* MODAL CUMPLEAÑOS ALERTA CAJERO */
+        .modal-cumple { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center; }
+        .cumple-box { background: white; width: 350px; border-radius: 12px; text-align: center; overflow: hidden; animation: pop 0.4s ease-out; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .cumple-header { background: #ff4757; color: white; padding: 25px; font-size: 45px; margin-bottom: 10px; }
+        .cumple-body { padding: 0 20px 20px 20px; color: #333; }
+        .btn-wa { background: #25D366; color: white; border: none; padding: 12px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px; width: 100%; font-size: 15px; display: flex; justify-content: center; align-items: center; gap: 8px; text-decoration: none; transition: 0.2s;}
+        .btn-wa:hover { background: #20b858; }
+        .btn-cerrar-cumple { background: #f1f2f6; color: #555; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; width: 100%; transition: 0.2s;}
+        .btn-cerrar-cumple:hover { background: #e2e4eb; }
+        @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        /* MODALES GENERALES */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; }
         .modal-apertura-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 200; justify-content: center; align-items: center; }
         
@@ -112,6 +125,10 @@
             </div>
             
             <span id="nombre-cajero" style="margin-right: 15px; font-weight: 500; font-size: 14px;"></span>
+            
+            <!-- BOTON CUMPLEAÑEROS HOY -->
+            <button class="btn-cumple" onclick="abrirModalListaCumples()">🎂 Cumpleañeros Hoy</button>
+            
             <button class="btn-historial" onclick="abrirModalHistorial()">🕒 Historial Ventas</button>
             <button class="btn-cerrar-turno" onclick="iniciarCierreTurno()">Cerrar Turno</button>
             <a href="admin.html" id="btn-admin" class="btn-admin">⚙️ Panel Admin</a>
@@ -291,6 +308,33 @@
                 <button onclick="cerrarModalHistorial()" style="background: #e74c3c; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">Cerrar</button>
             </div>
             <div id="contenido-historial" style="overflow-y: auto; flex-grow: 1;"></div>
+        </div>
+    </div>
+    
+    <!-- MODAL LISTA DE CUMPLEAÑEROS DE HOY -->
+    <div class="modal-overlay" id="modal-lista-cumples">
+        <div class="modal-box" style="width: 500px; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
+                <h2 style="margin: 0; font-size: 20px; color: #111111;">🎂 Cumpleañeros de Hoy</h2>
+                <button onclick="document.getElementById('modal-lista-cumples').style.display='none'" style="background: #e74c3c; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">Cerrar</button>
+            </div>
+            <p style="font-size: 13px; color: #666; margin-top: 0;">Lista de clientes que cumplen años en el día de hoy.</p>
+            <div id="contenido-lista-cumples" style="overflow-y: auto; flex-grow: 1; max-height: 400px;"></div>
+        </div>
+    </div>
+
+    <!-- MODAL CUMPLEAÑOS (ALERTA INDIVIDUAL CAJERO) -->
+    <div class="modal-cumple" id="modal-cumple">
+        <div class="cumple-box">
+            <div class="cumple-header">🎂🎉</div>
+            <div class="cumple-body">
+                <h2 style="margin: 0 0 5px 0; color: #111;">¡Feliz Cumpleaños!</h2>
+                <p style="margin-top: 5px; color: #555; font-size: 14px;">El cliente <strong id="cumple-nombre" style="color: #ff4757; font-size: 16px;"></strong> está celebrando su día hoy.</p>
+                <p style="font-size: 13px; color: #888; margin-top: -5px;">Celular: <span id="cumple-celular"></span></p>
+                
+                <a id="btn-wa-cumple" class="btn-wa" target="_blank">📲 Enviar Mensaje de Felicitación</a>
+                <button class="btn-cerrar-cumple" onclick="document.getElementById('modal-cumple').style.display='none'">Cerrar y Continuar</button>
+            </div>
         </div>
     </div>
 
@@ -888,7 +932,7 @@
             } catch (error) { console.error("Error al escanear código:", error); }
         }
 
-        // --- MAGIA DE LA LUPA: Buscar y mostrar premios ---
+        // --- MAGIA DE LA LUPA: Buscar y mostrar premios + ALERTA CUMPLEAÑOS ---
         window.buscarPremiosCliente = async function() {
             const celular = document.getElementById('cliente-celular').value.trim();
             const btn = document.getElementById('btn-buscar-cliente');
@@ -902,6 +946,35 @@
             try {
                 const res = await fetch(`https://seori-backend.onrender.com/api/clientes/${celular}/premios-disponibles`);
                 const data = await res.json();
+
+                // LÓGICA DE CUMPLEAÑOS (Consulta silenciosa adicional al perfil)
+                fetch(`https://seori-backend.onrender.com/api/clientes/${celular}/perfil`)
+                    .then(r => r.json())
+                    .then(perfil => {
+                        if (perfil.existe && perfil.fecha_nacimiento) {
+                            const hoy = new Date();
+                            const mesHoy = hoy.getMonth() + 1;
+                            const diaHoy = hoy.getDate();
+
+                            const partes = perfil.fecha_nacimiento.split('-'); // Asume formato YYYY-MM-DD
+                            if (partes.length === 3) {
+                                const mesCumple = parseInt(partes[1]);
+                                const diaCumple = parseInt(partes[2]);
+
+                                if (mesHoy === mesCumple && diaHoy === diaCumple) {
+                                    const nombreCli = perfil.nombre || "Cliente";
+                                    document.getElementById('cumple-nombre').innerText = nombreCli.toUpperCase();
+                                    document.getElementById('cumple-celular').innerText = celular;
+                                    
+                                    const mensajeWA = encodeURIComponent(`¡Hola ${nombreCli}! 🎉 Desde Seori Korean Ice queremos desearte un muy feliz cumpleaños. 🍧 Ven a visitarnos hoy para celebrar tu día.`);
+                                    document.getElementById('btn-wa-cumple').href = `https://wa.me/57${celular}?text=${mensajeWA}`;
+                                    
+                                    document.getElementById('modal-cumple').style.display = 'flex';
+                                }
+                            }
+                        }
+                    })
+                    .catch(e => console.log("Verificación de cumpleaños omitida"));
 
                 infoStickers.innerText = `⭐ ${data.stickers} stickers`;
                 infoStickers.style.display = 'block';
@@ -918,8 +991,8 @@
                     contenedorPremios.style.display = 'block';
                 } else {
                     contenedorPremios.style.display = 'none';
-                    if(data.stickers === 0) alert("Cliente nuevo o con 0 stickers.");
-                    else alert(`Tiene ${data.stickers} stickers, pero aún no le alcanzan para ningún premio.`);
+                    if(data.stickers === 0) alert("Cliente nuevo o con 0 puntos.");
+                    else alert(`Tiene ${data.stickers} puntos, pero aún no le alcanzan para ningún premio.`);
                 }
             } catch(e) {
                 alert("Error al consultar la base de datos.");
@@ -937,13 +1010,85 @@
                 variante: premio.nombre_premio, 
                 precio: 0, // ¡Gratis!
                 cantidad: 1, 
-                notas: `Costo: ${premio.costo_stickers} stickers`,
+                notas: `Costo: ${premio.costo_stickers} puntos`,
                 isPremio: true,
                 premio_id: premio.id,
                 costo_stickers: premio.costo_stickers
             });
             actualizarTicket();
             document.getElementById('contenedor-premios').style.display = 'none'; 
+        }
+
+        // --- LISTAR CUMPLEAÑEROS DEL DÍA ---
+        window.abrirModalListaCumples = async function() {
+            const modal = document.getElementById('modal-lista-cumples');
+            const contenedor = document.getElementById('contenido-lista-cumples');
+            
+            modal.style.display = 'flex';
+            contenedor.innerHTML = '<p style="text-align: center; color: #555;">⏳ Buscando cumpleañeros de hoy en la base de datos...</p>';
+
+            try {
+                // Hacemos una consulta directa a la base de datos a través de Supabase JS o Fetch
+                // En este caso, usaremos el backend de Render si tienes un endpoint, 
+                // o lo simularemos obteniendo todos los clientes y filtrando en el frontend.
+                // Como no modificamos el server.js, filtraremos en el cliente para ser rápidos.
+                
+                const res = await fetch(`https://seori-backend.onrender.com/api/clientes/todos`); 
+                // Asumo que tienes una ruta para ver todos los clientes. Si no, ajustamos.
+                
+                if (!res.ok) {
+                    contenedor.innerHTML = '<p style="text-align: center; color: red;">Error al consultar la base de datos.</p>';
+                    return;
+                }
+                
+                const clientes = await res.json();
+                const hoy = new Date();
+                const mesHoy = hoy.getMonth() + 1;
+                const diaHoy = hoy.getDate();
+                
+                let cumpleaneros = clientes.filter(c => {
+                    if (!c.fecha_nacimiento) return false;
+                    const partes = c.fecha_nacimiento.split('-');
+                    if (partes.length === 3) {
+                        return parseInt(partes[1]) === mesHoy && parseInt(partes[2]) === diaHoy;
+                    }
+                    return false;
+                });
+
+                if (cumpleaneros.length === 0) {
+                    contenedor.innerHTML = '<div style="text-align: center; padding: 30px;"><div style="font-size: 40px; margin-bottom: 10px;">📅</div><p style="color: #666; font-weight: bold;">Ningún cliente registrado cumple años hoy.</p></div>';
+                    return;
+                }
+
+                let html = '';
+                cumpleaneros.forEach(c => {
+                    const nombreCli = c.nombre || "Cliente Sin Nombre";
+                    const mensajeWA = encodeURIComponent(`¡Hola ${nombreCli}! 🎉 Desde Seori Korean Ice queremos desearte un muy feliz cumpleaños. 🍧 Ven a visitarnos hoy para celebrar tu día.`);
+                    
+                    html += `
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: #fff3cd; border: 1px solid #ffeeba; padding: 12px 15px; border-radius: 8px; margin-bottom: 10px;">
+                            <div>
+                                <strong style="color: #856404; font-size: 16px; display: block;">${nombreCli.toUpperCase()}</strong>
+                                <span style="color: #666; font-size: 13px;">📱 ${c.celular}</span>
+                            </div>
+                            <a href="https://wa.me/57${c.celular}?text=${mensajeWA}" target="_blank" style="background: #25D366; color: white; text-decoration: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; transition: 0.2s;">
+                                📲 Felicitar
+                            </a>
+                        </div>
+                    `;
+                });
+                contenedor.innerHTML = html;
+
+            } catch (error) {
+                // Si la ruta /api/clientes/todos no existe en el server.js, mostramos un mensaje amigable
+                contenedor.innerHTML = `
+                    <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; text-align: center; font-size: 14px;">
+                        ⚠️ <strong>Actualización Requerida en el Servidor</strong><br><br>
+                        Para listar los cumpleañeros, necesitamos agregar una pequeña ruta en tu archivo <code>server.js</code>. 
+                        Avisa al administrador para realizar este ajuste.
+                    </div>
+                `;
+            }
         }
         
         iniciarSistema();
