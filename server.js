@@ -988,6 +988,20 @@ app.get('/api/clientes/:celular', async (req, res) => {
     }
 });
 
+// --- RUTA NUEVA: Consultar todos los clientes (Para reporte de Cumpleaños) ---
+app.get('/api/clientes/todos', async (req, res) => {
+    try {
+        const { data: clientes, error } = await supabase.from('clientes')
+            .select('celular, nombre, fecha_nacimiento');
+        
+        if (error) throw error;
+        
+        res.json(clientes);
+    } catch (error) {
+        res.status(500).json({ error: 'Error al consultar clientes' });
+    }
+});
+
 
 // --- RUTA: Consultar Premios Disponibles (CON NOMBRE DINÁMICO DESDE EL INVENTARIO) ---
 app.get('/api/clientes/:celular/premios-disponibles', async (req, res) => {
