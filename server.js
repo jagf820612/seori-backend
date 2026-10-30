@@ -1058,7 +1058,7 @@ app.get('/api/clientes/:celular/premios-disponibles', async (req, res) => {
 // --- RUTA: Consultar Perfil y TODOS los Premios Activos ---
 app.get('/api/clientes/:celular/perfil', async (req, res) => {
     try {
-        const celular = req.params.celular;
+        const celular = req.params. celular;
         const { data: cliente } = await supabase.from('clientes')
             .select('nombre, fecha_nacimiento, cantidad_stickers')
             .eq('celular', celular).single();
