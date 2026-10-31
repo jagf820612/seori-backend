@@ -956,21 +956,21 @@
                             const mesHoy = hoy.getMonth() + 1;
                             const diaHoy = hoy.getDate();
 
-                            const partes = perfil.fecha_nacimiento.split('-'); // Asume formato YYYY-MM-DD
-                            if (partes.length === 3) {
-                                const mesCumple = parseInt(partes[1]);
-                                const diaCumple = parseInt(partes[2]);
+                            // Ajuste para el formato de fecha que devuelve Supabase
+                            const fechaParseada = new Date(perfil.fecha_nacimiento);
+                            // Usamos getUTCMonth y getUTCDate para evitar desfases de zona horaria si la fecha viene en UTC
+                            const mesCumple = fechaParseada.getUTCMonth() + 1; 
+                            const diaCumple = fechaParseada.getUTCDate();
 
-                                if (mesHoy === mesCumple && diaHoy === diaCumple) {
-                                    const nombreCli = perfil.nombre || "Cliente";
-                                    document.getElementById('cumple-nombre').innerText = nombreCli.toUpperCase();
-                                    document.getElementById('cumple-celular').innerText = celular;
-                                    
-                                    const mensajeWA = encodeURIComponent(`¡Hola ${nombreCli}! 🎉 Desde Seori Korean Ice queremos desearte un muy feliz cumpleaños. 🍧 Ven a visitarnos hoy para celebrar tu día.`);
-                                    document.getElementById('btn-wa-cumple').href = `https://wa.me/57${celular}?text=${mensajeWA}`;
-                                    
-                                    document.getElementById('modal-cumple').style.display = 'flex';
-                                }
+                            if (mesHoy === mesCumple && diaHoy === diaCumple) {
+                                const nombreCli = perfil.nombre || "Cliente";
+                                document.getElementById('cumple-nombre').innerText = nombreCli.toUpperCase();
+                                document.getElementById('cumple-celular').innerText = celular;
+                                
+                                const mensajeWA = encodeURIComponent(`¡Hola ${nombreCli}! 🎉 Desde Seori Korean Ice queremos desearte un muy feliz cumpleaños. 🍧 Ven a visitarnos hoy para celebrar tu día.`);
+                                document.getElementById('btn-wa-cumple').href = `https://wa.me/57${celular}?text=${mensajeWA}`;
+                                
+                                document.getElementById('modal-cumple').style.display = 'flex';
                             }
                         }
                     })
@@ -1048,11 +1048,13 @@
                 
                 let cumpleaneros = clientes.filter(c => {
                     if (!c.fecha_nacimiento) return false;
-                    const partes = c.fecha_nacimiento.split('-');
-                    if (partes.length === 3) {
-                        return parseInt(partes[1]) === mesHoy && parseInt(partes[2]) === diaHoy;
-                    }
-                    return false;
+                    
+                    // Usar Date nativo y getUTC para parsear de manera segura el timestamptz que viene de Supabase
+                    const fechaParseada = new Date(c.fecha_nacimiento);
+                    const mesCumple = fechaParseada.getUTCMonth() + 1; 
+                    const diaCumple = fechaParseada.getUTCDate();
+                    
+                    return mesCumple === mesHoy && diaCumple === diaHoy;
                 });
 
                 if (cumpleaneros.length === 0) {
